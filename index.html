@@ -519,11 +519,11 @@ function renderResults(){
     ${filterLabel ? `<span class="ljt-pill active">${filterLabel} (${filtered.length})</span>` : ''}
   </div>
   <table class="ljt-table"><thead><tr>
-    <th onclick="setResultsSort('name')" style="cursor:pointer;user-select:none;">Lead \${resultsSort.col==='name'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
-    <th onclick="setResultsSort('source')" style="cursor:pointer;user-select:none;">Source \${resultsSort.col==='source'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
-    <th onclick="setResultsSort('ttfc')" style="cursor:pointer;user-select:none;">Time to first contact \${resultsSort.col==='ttfc'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
-    <th onclick="setResultsSort('outcome')" style="cursor:pointer;user-select:none;">Outcome \${resultsSort.col==='outcome'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
-    <th onclick="setResultsSort('issues')" style="cursor:pointer;user-select:none;">Issues \${resultsSort.col==='issues'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+    <th onclick="setResultsSort('name')" style="cursor:pointer;user-select:none;">Lead ${resultsSort.col==='name'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+    <th onclick="setResultsSort('source')" style="cursor:pointer;user-select:none;">Source ${resultsSort.col==='source'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+    <th onclick="setResultsSort('ttfc')" style="cursor:pointer;user-select:none;">Time to first contact ${resultsSort.col==='ttfc'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+    <th onclick="setResultsSort('outcome')" style="cursor:pointer;user-select:none;">Outcome ${resultsSort.col==='outcome'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+    <th onclick="setResultsSort('issues')" style="cursor:pointer;user-select:none;">Issues ${resultsSort.col==='issues'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
   </tr></thead><tbody>`;
   if(pageItems.length === 0){
     html += `<tr><td colspan="5" style="text-align:center;color:var(--color-text-tertiary);padding:20px;">No leads match this filter.</td></tr>`;
