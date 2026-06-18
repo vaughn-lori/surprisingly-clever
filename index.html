@@ -316,7 +316,7 @@ function renderAlerts(){
     <div class="ljt-metric"><p class="ljt-metric-label">Contact rate</p><p class="ljt-metric-value">${contactedRate}%</p><p class="ljt-metric-sub">Leads reached at least once</p></div>
     <div class="ljt-metric"><p class="ljt-metric-label">Touch rate</p><p class="ljt-metric-value">${SUMMARY.touch_rate}%</p><p class="ljt-metric-sub">Leads with any attempt logged</p></div>
     <div class="ljt-metric"><p class="ljt-metric-label">Completed rate</p><p class="ljt-metric-value">${SUMMARY.completed_rate}%</p><p class="ljt-metric-sub">Conversion to agent match</p></div>
-    <div class="ljt-metric"><p class="ljt-metric-label">Open alerts</p><p class="ljt-metric-value">${total}</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Open alerts</p><p class="ljt-metric-value">${total - resolvedAlerts.size}</p><p class="ljt-metric-sub">${resolvedAlerts.size ? resolvedAlerts.size+" resolved" : "Click alert to resolve"}</p></div>
     <div class="ljt-metric"><p class="ljt-metric-label">Total attempts</p><p class="ljt-metric-value">${SUMMARY.total_attempts}</p><p class="ljt-metric-sub">Calls + SMS combined</p></div>
     <div class="ljt-metric"><p class="ljt-metric-label">Avg attempts / lead</p><p class="ljt-metric-value">${avgAttempts}</p><p class="ljt-metric-sub">Dial/text cadence depth</p></div>
     <div class="ljt-metric"><p class="ljt-metric-label">Compliance exposure</p><p class="ljt-metric-value" style="color:var(--color-text-danger);">${SUMMARY.consent_violation + SUMMARY.intake_form_gap}</p><p class="ljt-metric-sub">Leads with consent issues</p></div>
@@ -343,6 +343,7 @@ function renderAlerts(){
   order.forEach(key=>{
     const meta=ISSUE_META[key];
     if(!meta.count) return;
+    if(resolvedAlerts.has(key)) return;
     html+=`<div class="ljt-alert" onclick="toggleWhyFix('${key}')">
       <span class="ljt-dot" style="background:${sevDotVar(meta.severity)};"></span>
       <div style="flex:1;">
@@ -363,14 +364,29 @@ function renderAlerts(){
           <div class="ljt-why"><span style="font-weight:500;">Why:</span> ${meta.why}</div>
           <div class="ljt-fix"><span style="font-weight:500;">Fix:</span> ${meta.fix}</div>
           <p style="font-size:12px;color:var(--color-text-tertiary);margin:0;">${meta.fixNote}</p>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="ljt-cta-secondary" onclick="event.stopPropagation();showNotifyDraft('${key}')">Notify owner</button>
             <button class="ljt-cta-secondary" onclick="event.stopPropagation();filterToIssue('${key}')">See affected leads</button>
+            <button class="ljt-cta-secondary" style="margin-left:auto;opacity:0.7;" onclick="event.stopPropagation();resolveAlert('${key}')">Mark resolved</button>
           </div>
         </div>
       </div>
     </div>`;
   });
+  // Show resolved alerts section if any
+  const resolvedKeys = order.filter(k=>resolvedAlerts.has(k));
+  if(resolvedKeys.length){
+    html+=`<div class="ljt-card" style="opacity:0.5;margin-top:8px;"><p style="font-weight:500;font-size:13px;margin:0 0 8px;color:var(--color-text-secondary);">Resolved (${resolvedKeys.length})</p>`;
+    resolvedKeys.forEach(key=>{
+      const meta=ISSUE_META[key];
+      html+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--color-border);">
+        <span style="font-size:13px;text-decoration:line-through;color:var(--color-text-tertiary);">${meta.label}</span>
+        <span style="font-size:11px;color:var(--color-text-tertiary);">${meta.count} lead${meta.count===1?'':'s'}</span>
+        <button class="ljt-cta-secondary" style="margin-left:auto;font-size:11px;padding:2px 8px;" onclick="resolvedAlerts.delete('${key}');renderAlerts();">Reopen</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
   html+=`</div><p class="ljt-note">Counts reflect the full 206-lead dataset, recomputed directly from the source files, plus two direct observations from a live OfferNest capture form screenshot. Owners are suggested functional placeholders, not confirmed assignments.</p>`;
   document.getElementById('panel-alerts').innerHTML=html;
 }
@@ -381,6 +397,11 @@ function toggleWhyFix(key){
   const isOpen = el.style.display !== 'none';
   document.querySelectorAll('[id^="whyfix-"]').forEach(e => e.style.display = 'none');
   el.style.display = isOpen ? 'none' : 'grid';
+}
+
+function resolveAlert(key){
+  resolvedAlerts.add(key);
+  renderAlerts();
 }
 
 function filterToIssue(key){
@@ -429,6 +450,10 @@ function renderAssumptions(){
 let resultsFilter = 'all';
 let leadsOriginTab = 'results-macro';
 let resultsSort = { col: 'name', dir: 1 };
+const resolvedAlerts = new Set();
+let outreachSort = { col: 'at', dir: 1 };
+let sourcesSort = { col: 'total', dir: -1 };
+let agentsSort = { col: 'attempts', dir: -1 };
 let resultsPage = 0;
 let resultsSearch = '';
 const RESULTS_PAGE_SIZE = 15;
@@ -581,18 +606,45 @@ const OUTREACH_PAGE_SIZE = 20;
 function outreachGoToPage(p){ outreachPage = p; renderOutreach(); }
 function setOutreachSearch(v){ outreachSearch = v.trim().toLowerCase(); outreachPage = 0; renderOutreach(); }
 
+function setOutreachSort(col){
+  if(outreachSort.col===col) outreachSort.dir*=-1; else { outreachSort.col=col; outreachSort.dir=1; }
+  outreachPage=0; renderOutreach();
+}
+function sortOutreach(list){
+  const {col,dir}=outreachSort;
+  return [...list].sort((a,b)=>{
+    let av,bv;
+    if(col==='lead'){av=a.leadName;bv=b.leadName;}
+    else if(col==='source'){av=a.source;bv=b.source;}
+    else if(col==='channel'){av=a.channel;bv=b.channel;}
+    else if(col==='status'){av=a.status;bv=b.status;}
+    else if(col==='agent'){av=a.agent;bv=b.agent;}
+    else{av=new Date(a.at).getTime();bv=new Date(b.at).getTime();}
+    if(typeof av==='string') return av.localeCompare(bv)*dir;
+    return (av-bv)*dir;
+  });
+}
 function renderOutreach(){
-  let list = ATTEMPTS;
+  let list = sortOutreach(ATTEMPTS);
   if(outreachSearch){
     list = list.filter(a => a.leadId.toLowerCase().includes(outreachSearch) || a.leadName.toLowerCase().includes(outreachSearch) || a.agent.toLowerCase().includes(outreachSearch) || a.source.toLowerCase().includes(outreachSearch));
   }
   const totalPages = Math.max(1, Math.ceil(list.length / OUTREACH_PAGE_SIZE));
   if(outreachPage >= totalPages) outreachPage = totalPages - 1;
   const pageItems = list.slice(outreachPage*OUTREACH_PAGE_SIZE, (outreachPage+1)*OUTREACH_PAGE_SIZE);
+  const s=(c)=>outreachSort.col===c?(outreachSort.dir===1?'↑':'↓'):'↕';
 
-  let html = `<p style="color:var(--color-text-secondary);font-size:13px;margin:0 0 10px;">All ${ATTEMPTS.length} outreach attempts from outreach_log.csv, sorted chronologically \u2014 not a sample.</p>
+  let html = `<p style="color:var(--color-text-secondary);font-size:13px;margin:0 0 10px;">All ${ATTEMPTS.length} outreach attempts from outreach_log.csv \u2014 not a sample.</p>
   <input class="ljt-search" placeholder="Search by lead ID, name, agent, or source" value="${outreachSearch}" oninput="setOutreachSearch(this.value)">
-  <table class="ljt-table"><thead><tr><th>Attempt</th><th>Lead</th><th>Source</th><th>Channel</th><th>Status</th><th>Agent</th><th>Time</th></tr></thead><tbody>`;
+  <table class="ljt-table"><thead><tr>
+    <th>Attempt</th>
+    <th onclick="setOutreachSort('lead')" style="cursor:pointer;user-select:none;">Lead ${s('lead')}</th>
+    <th onclick="setOutreachSort('source')" style="cursor:pointer;user-select:none;">Source ${s('source')}</th>
+    <th onclick="setOutreachSort('channel')" style="cursor:pointer;user-select:none;">Channel ${s('channel')}</th>
+    <th onclick="setOutreachSort('status')" style="cursor:pointer;user-select:none;">Status ${s('status')}</th>
+    <th onclick="setOutreachSort('agent')" style="cursor:pointer;user-select:none;">Agent ${s('agent')}</th>
+    <th onclick="setOutreachSort('at')" style="cursor:pointer;user-select:none;">Time ${s('at')}</th>
+  </tr></thead><tbody>`;
   if(pageItems.length === 0){
     html += `<tr><td colspan="7" style="text-align:center;color:var(--color-text-tertiary);padding:20px;">No attempts match this search.</td></tr>`;
   }
@@ -612,9 +664,33 @@ function renderOutreach(){
   document.getElementById('panel-outreach-macro').innerHTML = html;
 }
 
+function setSourcesSort(col){
+  if(sourcesSort.col===col) sourcesSort.dir*=-1; else { sourcesSort.col=col; sourcesSort.dir=1; }
+  renderSources();
+}
 function renderSources(){
-  let html=`<table class="ljt-table"><thead><tr><th>Source</th><th>Leads</th><th>Touch rate</th><th>Completed rate</th><th>Bimodal response</th><th>Cross-partner dup leads</th></tr></thead><tbody>`;
-  SOURCES.forEach(s=>{
+  const sorted=[...SOURCES].sort((a,b)=>{
+    const {col,dir}=sourcesSort;
+    let av,bv;
+    if(col==='name'){av=a.name;bv=b.name;}
+    else if(col==='touchRate'){av=a.touchRate;bv=b.touchRate;}
+    else if(col==='completedRate'){av=a.completedRate;bv=b.completedRate;}
+    else if(col==='slow'){av=a.slow;bv=b.slow;}
+    else if(col==='dup'){av=a.dup;bv=b.dup;}
+    else{av=a.total;bv=b.total;}
+    if(typeof av==='string') return av.localeCompare(bv)*dir;
+    return (av-bv)*dir;
+  });
+  const si=(c)=>sourcesSort.col===c?(sourcesSort.dir===1?'↑':'↓'):'↕';
+  let html=`<table class="ljt-table"><thead><tr>
+    <th onclick="setSourcesSort('name')" style="cursor:pointer;user-select:none;">Source ${si('name')}</th>
+    <th onclick="setSourcesSort('total')" style="cursor:pointer;user-select:none;">Leads ${si('total')}</th>
+    <th onclick="setSourcesSort('touchRate')" style="cursor:pointer;user-select:none;">Touch rate ${si('touchRate')}</th>
+    <th onclick="setSourcesSort('completedRate')" style="cursor:pointer;user-select:none;">Completed rate ${si('completedRate')}</th>
+    <th onclick="setSourcesSort('slow')" style="cursor:pointer;user-select:none;">Bimodal response ${si('slow')}</th>
+    <th onclick="setSourcesSort('dup')" style="cursor:pointer;user-select:none;">Cross-partner dups ${si('dup')}</th>
+  </tr></thead><tbody>`;
+  sorted.forEach(s=>{
     const tc=s.touchRate<100?'var(--color-text-danger)':'var(--color-text-success)';
     html+=`<tr class="clickable" onclick="showSource('${s.name}')">
       <td style="font-weight:500;">${s.name}</td>
@@ -679,13 +755,35 @@ let agentsPage = 0;
 const AGENTS_PAGE_SIZE = 15;
 function agentsGoToPage(p){ agentsPage = p; renderAgents(); }
 
+function setAgentsSort(col){
+  if(agentsSort.col===col) agentsSort.dir*=-1; else { agentsSort.col=col; agentsSort.dir=1; }
+  agentsPage=0; renderAgents();
+}
 function renderAgents(){
-  const sorted = [...AGENTS].sort((a,b)=>b.attempts-a.attempts);
+  if(!agentsSort) agentsSort={col:'attempts',dir:-1};
+  const sorted = [...AGENTS].sort((a,b)=>{
+    const {col,dir}=agentsSort;
+    let av,bv;
+    if(col==='id'){av=a.id;bv=b.id;}
+    else if(col==='leadsTouched'){av=a.leadsTouched;bv=b.leadsTouched;}
+    else if(col==='completed'){av=a.completed;bv=b.completed;}
+    else if(col==='rate'){av=a.completed/a.leadsTouched;bv=b.completed/b.leadsTouched;}
+    else{av=a.attempts;bv=b.attempts;}
+    if(typeof av==='string') return av.localeCompare(bv)*dir;
+    return (av-bv)*dir;
+  });
   const totalPages = Math.max(1, Math.ceil(sorted.length / AGENTS_PAGE_SIZE));
   if(agentsPage >= totalPages) agentsPage = totalPages - 1;
   const pageItems = sorted.slice(agentsPage*AGENTS_PAGE_SIZE, (agentsPage+1)*AGENTS_PAGE_SIZE);
-  let html=`<p style="color:var(--color-text-secondary);font-size:13px;margin:0 0 8px;">All ${AGENTS.length} agents who logged at least one outreach attempt, with leads_touched (distinct leads, not raw attempt count) \u2014 most handle under 20 leads, too thin a sample to separate skill from lead difficulty.</p>
-  <table class="ljt-table"><thead><tr><th>Agent</th><th>Leads touched</th><th>Attempts</th><th>Completed</th><th>Completion rate</th></tr></thead><tbody>`;
+  const sa=(c)=>agentsSort.col===c?(agentsSort.dir===1?'↑':'↓'):'↕';
+  let html=`<p style="color:var(--color-text-secondary);font-size:13px;margin:0 0 8px;">All ${AGENTS.length} agents who logged at least one outreach attempt \u2014 most handle under 20 leads, too thin a sample to separate skill from lead difficulty.</p>
+  <table class="ljt-table"><thead><tr>
+    <th onclick="setAgentsSort('id')" style="cursor:pointer;user-select:none;">Agent ${sa('id')}</th>
+    <th onclick="setAgentsSort('leadsTouched')" style="cursor:pointer;user-select:none;">Leads touched ${sa('leadsTouched')}</th>
+    <th onclick="setAgentsSort('attempts')" style="cursor:pointer;user-select:none;">Attempts ${sa('attempts')}</th>
+    <th onclick="setAgentsSort('completed')" style="cursor:pointer;user-select:none;">Completed ${sa('completed')}</th>
+    <th onclick="setAgentsSort('rate')" style="cursor:pointer;user-select:none;">Completion rate ${sa('rate')}</th>
+  </tr></thead><tbody>`;
   pageItems.forEach(a=>{
     const rate = (a.completed/a.leadsTouched*100).toFixed(1);
     html+=`<tr class="clickable" onclick="showAgent('${a.id}')">
