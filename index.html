@@ -1,17 +1,690 @@
 <!DOCTYPE html>
-  <html lang="en">
-  <head>
-  <meta charset="UTF-8">
-  <title>Surprisingly Clever</title>
-  <style>
-  body { font-family: -apple-system, sans-serif; max-width: 640px; margin: 80px auto; padding: 0 20px; color: #222; line-height: 1.6; }
-h1 { font-size: 28px; }
-.note { background: #fff8e1; border: 1px solid #f0d878; border-radius: 8px; padding: 16px 20px; margin-top: 24px; font-size: 14px; color: #6b5900; }
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Surprisingly Clever — Lead Pipeline Diagnostic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --color-text-primary: #22293b;
+  --color-text-secondary: #5a6a85;
+  --color-text-tertiary: #8a9ab5;
+  --color-text-info: #0B91DF;
+  --color-text-success: #0d7a5f;
+  --color-text-warning: #92520a;
+  --color-text-danger: #b91c1c;
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f4f6f9;
+  --color-background-info: #e6f4fc;
+  --color-background-success: #e6f7f3;
+  --color-background-warning: #fef3e2;
+  --color-background-danger: #fef2f2;
+  --color-border-tertiary: #dde2ec;
+  --color-border-secondary: #c8d0df;
+  --border-radius-md: 6px;
+  --border-radius-lg: 10px;
+  --font-mono: 'Courier New', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px;
+  background: var(--color-background-primary);
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: var(--color-text-primary);
+  min-height: 100vh;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Rubik', sans-serif;
+}
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 </style>
-  </head>
-  <body>
-  <h1>Surprisingly Clever</h1>
-  <p>Lead pipeline diagnostic tool for Clever Real Estate &mdash; coming online shortly.</p>
-  <div class="note">This is a placeholder page. The full interactive diagnostic tool is being finalized and will replace this shortly.</div>
-  </body>
-  </html>
+</head>
+<body>
+<style>
+.ljt-shell { font-size: 14px; color: var(--color-text-primary); }
+.ljt-heading { font-weight: 500; }
+.ljt-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.ljt-tab { padding: 8px 14px; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--color-text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.ljt-tab.active { color: #0B91DF; border-bottom-color: #0B91DF; }
+.ljt-tab:hover { color: var(--color-text-primary); }
+.ljt-panel { display: none; }
+.ljt-panel.active { display: block; }
+.ljt-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.ljt-metric { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; }
+.ljt-metric-label { font-size: 12px; color: var(--color-text-secondary); margin: 0 0 4px; }
+.ljt-metric-value { font-size: 22px; font-weight: 500; margin: 0; color: var(--color-text-primary); }
+.ljt-metric-value.sm { font-size: 17px; }
+.ljt-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; margin-bottom: 12px; }
+.ljt-alert { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; }
+.ljt-alert:last-child { border-bottom: none; }
+.ljt-alert:hover { background: var(--color-background-secondary); }
+.ljt-badge { font-size: 11px; padding: 2px 8px; border-radius: var(--border-radius-md); font-weight: 500; white-space: nowrap; }
+.ljt-badge-sev3 { background: var(--color-background-danger); color: var(--color-text-danger); }
+.ljt-badge-sev2 { background: var(--color-background-warning); color: var(--color-text-warning); }
+.ljt-badge-sev1 { background: var(--color-background-info); color: var(--color-text-info); }
+.ljt-badge-auto { background: var(--color-background-success); color: var(--color-text-success); }
+.ljt-badge-ext { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+.ljt-badge-new { background: var(--color-background-info); color: var(--color-text-info); }
+.ljt-badge-money { background: var(--color-background-success); color: var(--color-text-success); }
+.ljt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ljt-table th { text-align: left; font-weight: 500; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); font-size: 12px; cursor: pointer; user-select: none; }
+.ljt-table td { padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.ljt-table tr.clickable:hover { background: var(--color-background-secondary); cursor: pointer; }
+.ljt-row-flex { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ljt-event { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-left: 2px solid var(--color-border-tertiary); padding-left: 12px; margin-left: 6px; position: relative; }
+.ljt-event::before { content: ""; position: absolute; left: -5px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-border-secondary); }
+.ljt-hop { font-size: 11px; color: var(--color-text-tertiary); padding: 2px 0 2px 12px; margin-left: 6px; }
+.ljt-back { font-size: 13px; color: var(--color-text-info); cursor: pointer; margin-bottom: 12px; display: inline-block; font-weight: 500; }
+.ljt-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.ljt-note { font-size: 12px; color: var(--color-text-tertiary); margin: 8px 0 0; }
+.ljt-why-fix { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
+.ljt-why { background: var(--color-background-danger); border-radius: var(--border-radius-md); padding: 8px 10px; font-size: 12px; color: var(--color-text-danger); }
+.ljt-fix { background: var(--color-background-success); border-radius: var(--border-radius-md); padding: 8px 10px; font-size: 12px; color: var(--color-text-success); }
+.ljt-meta-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.ljt-logo { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; }
+.ljt-logo-mark { width: 22px; height: 22px; }
+.ljt-logo-text { font-weight: 600; font-size: 16px; color: #0B91DF; }
+.ljt-cta { background: #0EC18F; color: #fff; border: none; border-radius: var(--border-radius-md); padding: 6px 14px; font-weight: 500; font-size: 13px; cursor: pointer; }
+.ljt-cta:hover { background: #0a8a65; }
+.ljt-cta-secondary { background: var(--color-background-secondary); color: var(--color-text-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 6px 14px; font-weight: 500; font-size: 13px; cursor: pointer; }
+.ljt-calc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.ljt-calc-label { font-size: 13px; color: var(--color-text-secondary); min-width: 170px; }
+.ljt-assumption { font-size: 11px; color: var(--color-text-tertiary); font-style: italic; }
+.ljt-assum-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.ljt-assum-table td { padding: 6px 4px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; }
+.ljt-assum-table td:first-child { color: var(--color-text-secondary); width: 38%; }
+.ljt-draft-box { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; font-size: 12px; font-family: monospace; white-space: pre-wrap; margin-top: 8px; color: var(--color-text-primary); }
+.ljt-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ljt-bar-label { font-size: 11px; color: var(--color-text-secondary); width: 70px; text-align: right; flex-shrink: 0; }
+.ljt-bar-track { flex: 1; height: 14px; background: var(--color-background-secondary); border-radius: 3px; overflow: hidden; }
+.ljt-bar-fill { height: 100%; border-radius: 3px; }
+.ljt-filter-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.ljt-pill { font-size: 12px; padding: 5px 10px; border-radius: 14px; border: 0.5px solid var(--color-border-tertiary); background: var(--color-background-secondary); color: var(--color-text-secondary); cursor: pointer; }
+.ljt-pill.active { background: #0B91DF; color: #fff; border-color: #0B91DF; }
+.ljt-pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--color-text-secondary); flex-wrap: wrap; }
+.ljt-pager-btns { display: flex; gap: 6px; }
+.ljt-pager-btn { padding: 4px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); background: var(--color-background-secondary); color: var(--color-text-primary); cursor: pointer; font-size: 12px; }
+.ljt-pager-btn:disabled { opacity: 0.4; cursor: default; }
+.ljt-search { width: 100%; max-width: 280px; padding: 6px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); background: var(--color-background-primary); color: var(--color-text-primary); font-size: 13px; margin-bottom: 10px; }
+</style>
+<div class="ljt-shell">
+  <h2 class="sr-only">Surprisingly Clever lead pipeline diagnostic: full dataset of all 206 leads and 379 outreach attempts, with alerts, monetized impact, owner notifications, and agent drill-through</h2>
+  <div class="ljt-logo">
+    <svg class="ljt-logo-mark" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C7.6 2 4 5.6 4 10c0 5.4 6.6 11 7.3 11.6.4.3 1 .3 1.4 0C13.4 21 20 15.4 20 10c0-4.4-3.6-8-8-8z" fill="#0B91DF"/>
+      <path d="M12 6.5l-3.2 2.8v4.2h2.1v-2.6h2.2v2.6h2.1V9.3L12 6.5z" fill="#fff"/>
+    </svg>
+    <span class="ljt-logo-text">Surprisingly Clever</span>
+    <span style="font-size:13px;color:var(--color-text-secondary);margin-left:2px;">Lead pipeline diagnostic</span>
+  </div>
+  <div class="ljt-tabs">
+    <button class="ljt-tab active" data-tab="alerts">Alerts</button>
+    <button class="ljt-tab" data-tab="assumptions">Assumptions</button>
+    <button class="ljt-tab" data-tab="results-macro">All leads (206)</button>
+    <button class="ljt-tab" data-tab="outreach-macro">Outreach log (379)</button>
+    <button class="ljt-tab" data-tab="sources-macro">Sources</button>
+    <button class="ljt-tab" data-tab="agents-macro">Agents (40)</button>
+  </div>
+  <div class="ljt-panel active" id="panel-alerts"></div>
+  <div class="ljt-panel" id="panel-assumptions"></div>
+  <div class="ljt-panel" id="panel-results-macro"></div>
+  <div class="ljt-panel" id="panel-lead-detail"></div>
+  <div class="ljt-panel" id="panel-outreach-macro"></div>
+  <div class="ljt-panel" id="panel-sources-macro"></div>
+  <div class="ljt-panel" id="panel-source-detail"></div>
+  <div class="ljt-panel" id="panel-agents-macro"></div>
+  <div class="ljt-panel" id="panel-agent-detail"></div>
+  <div class="ljt-panel" id="panel-notify"></div>
+</div>
+<script>
+const SUMMARY = { total_leads:206, total_attempts:379, touch_rate:91.3, completed_rate:43.2, untouched:18, slow_response:20, sms_dead_end:12, consent_violation:10, redundant_contact:5, duplicates:14, dup_groups:7, conflicting_type:4, missing_email:15, missing_consent_field:17, intake_form_gap:1, bot_protection_gap:1 };
+
+const LEADS_TUPLE = [["20001","Eric Brown","LeadBridge","2026-05-07T9:47:00","(225) 959-5506","eric.brown70@example.com",1,1,"b","completed",2,"","","","c|completed|102|2"],["20002","Karen Moore","ListingLoop","2026-05-14T18:34:00","(816) 227-4257","karen.moore36@example.com",1,1,"b","completed",7,"","","","c|completed|118|7"],["20003","Greg Hernandez","OfferNest","2026-05-09T12:38:00","3042947224",null,1,1,"s","completed",8,"missing_email","","","c|no_answer|106|8;s|delivered|106|22;c|completed|106|428"],["20004","Megan Davis","OfferNest","2026-05-10T11:29:00","+14962814814","megan.davis48@example.com",1,1,"s","completed",12,"","","","c|no_answer|105|12;s|delivered|105|20;c|completed|105|192"],["20005","Daniel Rodriguez","ListingLoop","2026-05-09T19:49:00","8559044598","daniel.rodriguez41@example.com",1,1,"s","completed",5,"","","","c|voicemail|137|5;s|delivered|137|18;c|completed|137|305"],["20006","Heather Perez","LeadBridge","2026-05-07T18:35:00","669.346.5339","heather.perez55@example.com",1,1,"s","delivered",5,"","","","c|no_answer|109|5;s|delivered|109|10"],["20007","Diana Brown","ListingLoop","2026-05-10T16:04:00","356.842.3621","diana.brown60@example.com",1,1,"s","delivered",12,"","","","c|no_answer|108|12;s|delivered|108|32"],["20008","Greg Perez","SellFast Direct","2026-05-06T14:00:00","548.314.5808","greg.perez34@example.com",null,1,"s","completed",12,"missing_consent_field","","","c|voicemail|120|12;c|completed|120|312"],["20009","Greg Garcia","AgentMatch Pro","2026-05-09T14:01:00","752-743-1009","greg.garcia40@example.com",1,1,"s","completed",11,"","","","c|completed|106|11"],["20010","Amanda Walker","LeadBridge","2026-05-06T17:30:00","270.978.9727","amanda.walker68@example.com",null,1,"s","no_answer",10,"missing_consent_field","","","c|no_answer|113|10;c|no_answer|113|430"],["20011","Brian Thomas","OfferNest","2026-05-09T7:37:00","(323) 453-4681","brian.thomas1@example.com",1,1,"s","no_answer",3,"","","","c|voicemail|103|3;s|delivered|103|8;c|no_answer|103|243"],["20012","David Jackson","LeadBridge","2026-05-16T14:51:00","3359408744","david.jackson85@example.com",1,1,"b","completed",8,"","","","c|voicemail|130|8;s|delivered|130|12;c|completed|130|428"],["20013","Daniel Harris","LeadBridge","2026-05-07T15:28:00","547-311-5073","daniel.harris60@example.com",1,1,"b","completed",10,"","","","c|completed|107|10"],["20014","Jessica Walker","LeadBridge","2026-05-10T14:30:00","215-295-4872","jessica.walker8@example.com",1,1,"s","no_answer",8,"","","","c|voicemail|117|8;s|delivered|117|25;c|no_answer|117|428"],["20015","Laura Jackson","LeadBridge","2026-05-07T11:13:00","(877) 935-8973","laura.jackson70@example.com",null,1,"s","no_answer",2,"missing_consent_field","","","c|no_answer|138|2"],["20016","Brian Garcia","LeadBridge","2026-05-05T16:04:00","258.720.2312","brian.garcia16@example.com",1,1,"s","completed",11,"","","","c|no_answer|106|11;s|delivered|106|30;c|completed|106|251"],["20017","Scott Hernandez","LeadBridge","2026-05-14T17:19:00","(444) 471-7484","scott.hernandez10@example.com",1,1,"s","completed",3,"","","","c|completed|135|3"],["20018","John Jones","HomeFlow","2026-05-08T9:28:00","557.270.5002","john.jones79@example.com",0,1,"s","no_answer",12,"","","","c|voicemail|107|12;c|no_answer|107|192"],["20019","Rachel Jackson","AgentMatch Pro","2026-05-07T18:21:00","359.478.5616","rachel.jackson34@example.com",1,1,"s","no_answer",2,"","","","c|no_answer|106|2;s|delivered|106|13;c|no_answer|106|242"],["20020","Eric Rodriguez","AgentMatch Pro","2026-05-15T13:35:00","365-959-8239",null,1,1,"s","completed",7,"missing_email","","","c|no_answer|138|7;s|delivered|138|23;c|completed|138|247"],["20021","Heather Lewis","ListingLoop","2026-05-07T17:06:00","240.566.4441","heather.lewis53@example.com",1,1,"s","no_answer",4,"","","","c|voicemail|112|4;s|delivered|112|7;c|no_answer|112|244"],["20022","Emily Lewis","HomeFlow","2026-05-06T19:44:00","885-952-5065","emily.lewis61@example.com",1,1,"b","completed",7,"","","","c|voicemail|120|7;s|delivered|120|17;c|completed|120|427"],["20023","Chris Rodriguez","ListingLoop","2026-05-12T13:43:00","(271) 485-6753","chris.rodriguez4@example.com",null,1,"s","completed",11,"redundant_contact,missing_consent_field","","","c|completed|117|11;c|no_answer|117|431"],["20024","Chris Anderson","SellFast Direct","2026-05-13T10:16:00","820.723.2894","chris.anderson67@example.com",1,1,"s","no_answer",8,"","","","c|voicemail|105|8;s|delivered|105|21;c|no_answer|105|428"],["20025","Rachel Allen","ListingLoop","2026-05-10T12:25:00","5077196067","rachel.allen25@example.com",1,1,"s","completed",11,"","","","c|completed|137|11"],["20026","Jessica Walker","LeadBridge","2026-05-10T19:37:00","2005115700","jessica.walker57@example.com",1,1,"b","completed",4,"","","","c|completed|106|4"],["20027","Megan Perez","LeadBridge","2026-05-14T11:14:00","834-543-2530","megan.perez6@example.com",0,1,"s","no_answer",9,"","","","c|voicemail|127|9;c|no_answer|127|489"],["20028","Karen Jones","OfferNest","2026-05-16T13:14:00","8719041090","karen.jones67@example.com",1,1,"s","completed",3,"","","","c|completed|130|3"],["20029","Matt Thompson","SellFast Direct","2026-05-13T18:57:00","7437726198","matt.thompson71@example.com",1,1,"b","delivered",9,"","","","c|no_answer|117|9;s|delivered|117|20"],["20030","Brian Taylor","SellFast Direct","2026-05-05T18:18:00","(841) 444-5499","brian.taylor70@example.com",1,1,"s","completed",5,"","","","c|no_answer|125|5;s|delivered|125|14;c|completed|125|305"],["20031","Matt Anderson","SellFast Direct","2026-05-16T16:44:00","2634117883","matt.anderson74@example.com",1,1,"s","no_answer",7,"","","","c|no_answer|120|7;s|delivered|120|23;c|no_answer|120|427"],["20032","Ashley Allen","HomeFlow","2026-05-10T14:01:00","425-699-4595","ashley.allen52@example.com",1,1,"s","completed",11,"","","","c|completed|135|11"],["20033","Daniel Martin","OfferNest","2026-05-14T13:08:00","7778781444","daniel.martin34@example.com",0,1,"s","completed",9,"","","","c|completed|121|9"],["20034","John Clark","SellFast Direct","2026-05-04T18:34:00","(631) 458-2341","john.clark29@example.com",1,1,"s","no_answer",5,"","","","c|voicemail|113|5;s|delivered|113|12;c|no_answer|113|305"],["20035","Kevin Miller","HomeFlow","2026-05-06T16:38:00","+16769165198","kevin.miller21@example.com",null,1,"s","no_answer",6,"missing_consent_field","","","c|no_answer|137|6"],["20036","Daniel White","OfferNest","2026-05-15T19:19:00","403.277.4978","daniel.white16@example.com",0,1,"s","completed",10,"","","","c|no_answer|128|10;c|completed|128|430"],["20037","Emily Walker","HomeFlow","2026-05-14T14:45:00","+17013088102","emily.walker67@example.com",1,1,"b","no_answer",9,"","","","c|voicemail|128|9;s|delivered|128|20;c|no_answer|128|189"],["20038","Robert Rodriguez","AgentMatch Pro","2026-05-13T17:24:00","661-449-8613","robert.rodriguez42@example.com",1,1,"s","completed",7,"","","","c|completed|117|7"],["20039","Paul Lee","AgentMatch Pro","2026-05-07T8:15:00","918-482-1166","paul.lee98@example.com",1,1,"b","completed",9,"","","","c|completed|102|9"],["20040","Karen Wilson","ListingLoop","2026-05-13T12:30:00","908.449.6016","karen.wilson96@example.com",1,1,"s","completed",9,"","","","c|completed|118|9"],["20041","Karen Brown","OfferNest","2026-05-15T15:48:00","9383976169","karen.brown95@example.com",1,1,"s","completed",3,"","","","c|completed|113|3"],["20042","Nancy Garcia","LeadBridge","2026-05-08T7:03:00","5092149751","nancy.garcia17@example.com",1,1,"s","completed",11,"","","","c|no_answer|119|11;s|delivered|119|28;c|completed|119|131"],["20043","Diana Taylor","SellFast Direct","2026-05-05T16:40:00","+13162667565","diana.taylor73@example.com",1,1,"s","delivered",3,"","","","c|no_answer|136|3;s|delivered|136|13"],["20044","Daniel Thomas","HomeFlow","2026-05-13T16:03:00","653-504-8025","daniel.thomas98@example.com",1,1,"s","completed",12,"","","","c|completed|106|12"],["20045","Sarah Jackson","SellFast Direct","2026-05-11T18:38:00","+12763601043",null,1,1,"b","completed",3,"missing_email","","","c|voicemail|115|3;s|delivered|115|12;c|completed|115|363"],["20046","Michael Young","OfferNest","2026-05-06T19:19:00","4723452169","michael.young37@example.com",1,1,"b","completed",6,"","","","c|voicemail|126|6;s|delivered|126|25;c|completed|126|306"],["20047","Maria Allen","AgentMatch Pro","2026-05-08T7:05:00","642.952.6280","maria.allen74@example.com",1,1,"s","no_answer",11,"","","","c|no_answer|103|11;s|delivered|103|19;c|no_answer|103|431"],["20048","John Garcia","OfferNest","2026-05-11T12:26:00","+17996469056","john.garcia21@example.com",1,1,"b","completed",6,"","","","c|voicemail|126|6;s|delivered|126|26;c|completed|126|126"],["20049","Chris Brown","ListingLoop","2026-05-17T15:29:00","613.726.1018","chris.brown47@example.com",1,1,"b","completed",2,"","","","c|completed|114|2"],["20050","Michael Young","OfferNest","2026-05-04T17:38:00","494.648.8941","michael.young40@example.com",0,1,"b","voicemail",3,"","","","c|voicemail|115|3"],["20051","Matt Brown","ListingLoop","2026-05-08T15:45:00","863-357-9165","matt.brown61@example.com",1,1,"s","delivered",8,"","","","c|voicemail|113|8;s|delivered|113|27"],["20052","Michael Hall","HomeFlow","2026-05-16T15:17:00","271.482.7798","michael.hall39@example.com",0,1,"b","no_answer",4,"","","","c|no_answer|129|4;c|no_answer|129|484"],["20053","Chris Hall","AgentMatch Pro","2026-05-10T10:54:00","3939144912",null,1,1,"b","completed",12,"missing_email","","","c|no_answer|110|12;s|delivered|110|16;c|completed|110|372"],["20054","Linda Hall","SellFast Direct","2026-05-04T18:09:00","(650) 302-9617","linda.hall20@example.com",1,1,"s","delivered",7,"","","","c|no_answer|140|7;s|delivered|140|12"],["20055","Diana Thompson","ListingLoop","2026-05-15T19:31:00","(746) 589-6188",null,0,1,"s","no_answer",5,"missing_email","","","c|no_answer|106|5;c|no_answer|106|185"],["20056","Scott Martinez","OfferNest","2026-05-08T12:23:00","229.247.6314","scott.martinez53@example.com",1,1,"s","no_answer",4,"","","","c|no_answer|106|4;s|delivered|106|19;c|no_answer|106|184"],["20057","Kevin Jones","SellFast Direct","2026-05-08T17:00:00","437.672.5161","kevin.jones37@example.com",0,1,"s","no_answer",9,"","","","c|voicemail|123|9;c|no_answer|123|489"],["20058","Matt Hall","SellFast Direct","2026-05-05T10:24:00","+15094037302","matt.hall90@example.com",1,1,"b","delivered",6,"","","","c|no_answer|101|6;s|delivered|101|10"],["20059","Rachel Taylor","LeadBridge","2026-05-14T10:39:00","493-435-6772","rachel.taylor99@example.com",1,1,"s","completed",6,"","","","c|completed|129|6"],["20060","Nancy Harris","HomeFlow","2026-05-15T13:11:00","334.292.5835","nancy.harris47@example.com",1,1,"s","delivered",4,"","","","c|voicemail|117|4;s|delivered|117|22"],["20061","Lisa Harris","OfferNest","2026-05-06T19:14:00","546.317.8673","lisa.harris51@example.com",0,1,"s","completed",8,"redundant_contact","","","c|completed|101|8;c|no_answer|101|428"],["20062","Megan Rodriguez","OfferNest","2026-05-14T10:30:00","+17985907086","megan.rodriguez72@example.com",1,1,"s","delivered",12,"","","","c|no_answer|105|12;s|delivered|105|29"],["20063","Lisa Perez","OfferNest","2026-05-04T11:31:00","618-319-3290","lisa.perez69@example.com",1,1,"b","delivered",7,"","","","c|no_answer|135|7;s|delivered|135|14"],["20064","Eric Brown","HomeFlow","2026-05-04T18:23:00","+17018307686","eric.brown31@example.com",1,1,"s","completed",10,"","","","c|completed|123|10"],["20065","John Miller","ListingLoop","2026-05-07T17:40:00","+13256652501",null,1,1,"s","completed",11,"missing_email","","","c|completed|114|11"],["20066","Greg Jackson","LeadBridge","2026-05-09T19:09:00","412-800-4538","greg.jackson36@example.com",0,1,"s","completed",4,"","","","c|no_answer|108|4;c|completed|108|124"],["20067","Laura Davis","LeadBridge","2026-05-08T7:08:00","(802) 531-1258","laura.davis96@example.com",1,1,"b","completed",7,"","","","c|no_answer|133|7;s|delivered|133|24;c|completed|133|367"],["20068","Laura Young","SellFast Direct","2026-05-14T7:03:00","(874) 733-5941","laura.young55@example.com",null,1,"b","completed",3,"redundant_contact,missing_consent_field","","","c|completed|106|3;c|completed|106|243"],["20069","Eric Martin","SellFast Direct","2026-05-13T15:18:00","(761) 929-6327","eric.martin13@example.com",1,1,"s","completed",8,"","","","c|voicemail|129|8;s|delivered|129|24;c|completed|129|308"],["20070","Rachel Brown","ListingLoop","2026-05-08T12:09:00","(520) 637-6120","rachel.brown12@example.com",1,1,"b","no_answer",3,"","","","c|voicemail|124|3;s|delivered|124|23;c|no_answer|124|363"],["20071","Megan Brown","ListingLoop","2026-05-04T11:38:00","620-562-7929","megan.brown65@example.com",1,1,"b","completed",5,"","","","c|no_answer|107|5;s|delivered|107|25;c|completed|107|485"],["20072","Karen Lewis","AgentMatch Pro","2026-05-14T18:17:00","+16397741430","karen.lewis98@example.com",1,1,"s","no_answer",2,"","","","c|voicemail|112|2;s|delivered|112|17;c|no_answer|112|422"],["20073","James Williams","SellFast Direct","2026-05-10T14:21:00","964.743.4524","james.williams42@example.com",1,1,"s","completed",2,"","","","c|completed|110|2"],["20074","Ashley Johnson","SellFast Direct","2026-05-14T13:31:00","890.283.5458","ashley.johnson28@example.com",1,1,"s","completed",8,"","","","c|completed|108|8"],["20075","Megan Martin","OfferNest","2026-05-07T13:38:00","698-739-6053","megan.martin28@example.com",1,1,"s","completed",7,"","","","c|completed|108|7"],["20076","Rachel Anderson","AgentMatch Pro","2026-05-15T10:32:00","(379) 332-7229","rachel.anderson46@example.com",1,1,"s","delivered",8,"","","","c|no_answer|102|8;s|delivered|102|13"],["20077","Kevin Anderson","HomeFlow","2026-05-05T13:01:00","7876147843","kevin.anderson80@example.com",null,1,"s","completed",8,"redundant_contact,missing_consent_field","","","c|completed|107|8;c|completed|107|188"],["20078","Lisa Harris","LeadBridge","2026-05-05T15:40:00","+15474266456","lisa.harris45@example.com",1,1,"s","completed",3,"","","","c|completed|110|3"],["20079","Sarah Lee","LeadBridge","2026-05-16T17:31:00","3569782234","sarah.lee75@example.com",1,1,"s","completed",12,"","","","c|completed|121|12"],["20080","Robert Taylor","HomeFlow","2026-05-13T7:22:00","(652) 846-5961","robert.taylor58@example.com",1,1,"s","completed",6,"","","","c|no_answer|105|6;s|delivered|105|11;c|completed|105|366"],["20081","Kevin Jackson","AgentMatch Pro","2026-05-14T10:20:00","9562428368","kevin.jackson8@example.com",1,1,"s","no_answer",3,"","","","c|no_answer|133|3;s|delivered|133|7;c|no_answer|133|303"],["20082","Brian Moore","HomeFlow","2026-05-08T13:26:00","+18243626962","brian.moore7@example.com",1,1,"s","no_answer",3,"","","","c|no_answer|136|3;s|delivered|136|15;c|no_answer|136|483"],["20083","Heather Lee","AgentMatch Pro","2026-05-14T9:58:00","3535412335","heather.lee90@example.com",1,1,"s","delivered",6,"","","","c|no_answer|136|6;s|delivered|136|19"],["20084","Megan White","OfferNest","2026-05-14T17:27:00","+19569019624",null,1,1,"s","completed",7,"missing_email","","","c|completed|132|7"],["20085","Michael Jones","AgentMatch Pro","2026-05-16T15:53:00","+12795022657","michael.jones85@example.com",1,1,"s","completed",11,"","","","c|completed|125|11"],["20086","Sarah Walker","ListingLoop","2026-05-11T7:26:00","909.989.3712","sarah.walker57@example.com",1,1,"b","completed",5,"","","","c|completed|135|5"],["20087","Laura Lewis","ListingLoop","2026-05-13T14:29:00","680.398.7026","laura.lewis65@example.com",1,1,"s","completed",5,"","","","c|completed|139|5"],["20088","John Johnson","AgentMatch Pro","2026-05-05T18:54:00","856-692-7081","john.johnson11@example.com",1,1,"b","delivered",10,"","","","c|voicemail|110|10;s|delivered|110|15"],["20089","Karen Walker","SellFast Direct","2026-05-04T13:32:00","+16615571436","karen.walker11@example.com",1,1,"s","delivered",7,"","","","c|voicemail|107|7;s|delivered|107|20"],["20090","Michael Johnson","ListingLoop","2026-05-11T14:39:00","+14936833273",null,1,1,"s","delivered",10,"missing_email","","","c|no_answer|139|10;s|delivered|139|16"],["20091","Karen Martinez","SellFast Direct","2026-05-14T19:39:00","324.248.4906","karen.martinez64@example.com",1,1,"s","no_answer",12,"","","","c|no_answer|133|12;s|delivered|133|19;c|no_answer|133|132"],["20092","Karen Martin","AgentMatch Pro","2026-05-09T8:33:00","626.391.2402","karen.martin65@example.com",1,1,"b","completed",9,"","","","c|no_answer|103|9;s|delivered|103|23;c|completed|103|129"],["20093","Robert Lopez","AgentMatch Pro","2026-05-15T19:21:00","446-950-2698","robert.lopez44@example.com",1,1,"b","delivered",12,"","","","c|voicemail|112|12;s|delivered|112|17"],["20094","Matt Johnson","LeadBridge","2026-05-04T12:59:00","5004061717","matt.johnson70@example.com",1,1,"s","completed",12,"","","","c|completed|113|12"],["20095","Diana Clark","HomeFlow","2026-05-05T19:23:00","2488716438","diana.clark57@example.com",1,1,"s","no_answer",9,"","","","c|no_answer|132|9;s|delivered|132|28;c|no_answer|132|129"],["20096","Robert Anderson","HomeFlow","2026-05-09T8:05:00","816.384.9937","robert.anderson58@example.com",1,1,"s","completed",9,"","","","c|no_answer|123|9;s|delivered|123|23;c|completed|123|309"],["20097","Laura Johnson","HomeFlow","2026-05-12T19:47:00","276.887.7655","laura.johnson19@example.com",1,1,"s","completed",4,"","","","c|completed|105|4"],["20098","Eric Lopez","AgentMatch Pro","2026-05-06T17:28:00","(570) 592-1530","eric.lopez98@example.com",null,1,"s","no_answer",10,"missing_consent_field","","","c|no_answer|124|10"],["20099","Karen Brown","SellFast Direct","2026-05-12T13:58:00","2269534048","karen.brown34@example.com",1,1,"s","completed",9,"","","","c|completed|113|9"],["20100","Diana Williams","OfferNest","2026-05-16T17:54:00","(662) 376-8292","diana.williams91@example.com",null,1,"s","no_answer",6,"missing_consent_field","","","c|no_answer|111|6"],["20101","Eric Garcia","OfferNest","2026-05-07T19:08:00","570.720.4673","eric.garcia47@example.com",1,1,"s","completed",9,"","","","c|completed|136|9"],["20102","Paul Williams","ListingLoop","2026-05-15T14:33:00","(267) 516-7523","paul.williams74@example.com",1,1,"s","no_answer",12,"","","","c|no_answer|105|12;s|delivered|105|31;c|no_answer|105|492"],["20103","Eric Martin","SellFast Direct","2026-05-12T7:53:00","386-986-3114","eric.martin22@example.com",1,1,"s","no_answer",7,"","","","c|voicemail|134|7;s|delivered|134|12;c|no_answer|134|427"],["20104","John Jones","OfferNest","2026-05-12T17:10:00","840.510.9740","john.jones22@example.com",1,1,"s","no_answer",11,"","","","c|voicemail|103|11;s|delivered|103|14;c|no_answer|103|431"],["20105","John Perez","AgentMatch Pro","2026-05-14T7:31:00","+14159857825","john.perez83@example.com",0,1,"s","completed",12,"redundant_contact","","","c|completed|126|12;c|completed|126|132"],["20106","Matt Miller","OfferNest","2026-05-15T19:30:00","+15488213353","matt.miller94@example.com",1,1,"s","untouched",null,"untouched","","",""],["20107","Jessica Brown","OfferNest","2026-05-15T7:32:00","(526) 447-8642","jessica.brown19@example.com",1,1,"s","untouched",null,"untouched","","",""],["20108","Ashley Anderson","OfferNest","2026-05-15T11:55:00","454-363-6364","ashley.anderson25@example.com",null,1,"b","untouched",null,"untouched,missing_consent_field","","",""],["20109","Lisa Taylor","OfferNest","2026-05-16T16:56:00","223.292.7442","lisa.taylor28@example.com",1,1,"s","untouched",null,"untouched","","",""],["20110","Amanda Lee","OfferNest","2026-05-11T21:18:00","(869) 888-8710",null,1,1,"s","untouched",null,"untouched,missing_email","","",""],["20111","Nancy Clark","OfferNest","2026-05-14T4:46:00","+16125741741","nancy.clark25@example.com",1,1,"s","untouched",null,"untouched","","",""],["20112","Brian Thomas","OfferNest","2026-05-12T3:24:00","(982) 763-5582","brian.thomas79@example.com",0,1,"s","untouched",null,"untouched","","",""],["20113","Laura Hernandez","OfferNest","2026-05-15T13:23:00","(771) 574-3363","laura.hernandez65@example.com",1,1,"s","untouched",null,"untouched","","",""],["20114","Chris Lewis","OfferNest","2026-05-12T20:45:00","+16857318487","chris.lewis18@example.com",1,1,"s","untouched",null,"untouched","","",""],["20115","Ashley Harris","OfferNest","2026-05-13T2:25:00","506.807.6511","ashley.harris63@example.com",1,1,"b","untouched",null,"untouched","","",""],["20116","Chris Thompson","OfferNest","2026-05-11T13:23:00","(312) 626-6040","chris.thompson89@example.com",0,1,"b","untouched",null,"untouched","","",""],["20117","Laura Clark","OfferNest","2026-05-14T4:41:00","792.791.4728","laura.clark22@example.com",1,1,"b","untouched",null,"untouched","","",""],["20118","Megan Davis","OfferNest","2026-05-12T22:52:00","232-786-2800","megan.davis54@example.com",1,1,"s","untouched",null,"untouched","","",""],["20119","Greg Lee","OfferNest","2026-05-15T18:32:00","+16829532020","greg.lee72@example.com",1,1,"b","untouched",null,"untouched","","",""],["20120","Matt Young","OfferNest","2026-05-14T17:11:00","+17455509950","matt.young93@example.com",1,1,"b","untouched",null,"untouched","","",""],["20121","John Jackson","OfferNest","2026-05-13T10:15:00","5054305876","john.jackson89@example.com",1,1,"b","untouched",null,"untouched","","",""],["20122","Heather Young","OfferNest","2026-05-15T2:35:00","9384805715","heather.young49@example.com",1,1,"s","untouched",null,"untouched","","",""],["20123","Lisa White","OfferNest","2026-05-14T11:02:00","280-554-8247","lisa.white28@example.com",1,1,"s","untouched",null,"untouched","","",""],["20124","Michael Brown","OfferNest","2026-05-08T11:00:00","830-958-4920","michael.brown68@example.com",1,1,"s","completed",3,"","","","c|completed|127|3"],["20125","Megan Clark","OfferNest","2026-05-07T8:00:00","3402053587","megan.clark61@example.com",1,1,"s","no_answer",7,"","","","c|no_answer|119|7;s|delivered|119|12;c|no_answer|119|187"],["20126","Heather Young","OfferNest","2026-05-09T7:00:00","3796273880",null,null,1,"s","completed",6,"missing_consent_field,missing_email","","","c|completed|103|6"],["20127","Linda Young","OfferNest","2026-05-08T16:00:00","543-491-8444","linda.young64@example.com",null,1,"b","no_answer",6,"consent_violation,missing_consent_field","","","c|voicemail|113|6;s|delivered|113|19;c|no_answer|113|306"],["20128","James Harris","OfferNest","2026-05-09T9:00:00","5455024164","james.harris52@example.com",1,1,"s","delivered",3,"","","","c|no_answer|126|3;s|delivered|126|11"],["20129","Heather Davis","OfferNest","2026-05-07T12:00:00","+12064677284","heather.davis43@example.com",1,1,"s","completed",6,"","","","c|no_answer|124|6;s|delivered|124|10;c|completed|124|306"],["20130","Brian Young","OfferNest","2026-05-07T17:00:00","+19209886095","brian.young38@example.com",1,1,"s","delivered",5,"","","","c|no_answer|109|5;s|delivered|109|22"],["20131","Emily White","OfferNest","2026-05-08T12:00:00","762-682-9806","emily.white98@example.com",0,1,"s","completed",10,"consent_violation","","","c|no_answer|129|10;s|delivered|129|24;c|completed|129|370"],["20132","Tony Jackson","LeadBridge","2026-05-09T15:28:00","717.407.9792","tony.jackson27@example.com",1,1,"s","completed",9,"duplicate","20133","first","c|completed|137|9"],["20133","Tony Jackson","ListingLoop","2026-05-10T20:28:00","7174079792","tony.jackson8@example.com",1,1,"b","no_answer",9,"duplicate","20132","second","c|no_answer|120|9;s|delivered|120|24;c|no_answer|120|129"],["20134","Kevin Williams","ListingLoop","2026-05-12T7:59:00","(246) 633-6644","kevin.williams61@example.com",1,1,"b","completed",9,"duplicate","20135","first","c|no_answer|125|9;s|delivered|125|29;c|completed|125|489"],["20135","Kevin Williams","OfferNest","2026-05-12T13:59:00","2466336644","kevin.williams99@example.com",1,1,"b","delivered",4,"duplicate","20134","second","c|no_answer|135|4;s|delivered|135|11"],["20136","Karen Walker","HomeFlow","2026-05-14T18:34:00","203-974-1372","karen.walker49@example.com",1,1,"b","completed",11,"duplicate","20137","first","c|completed|102|11"],["20137","Karen Walker","SellFast Direct","2026-05-15T6:34:00","(203) 974-1372","karen.walker25@example.com",1,1,"b","no_answer",3,"duplicate","20136","second","c|no_answer|107|3;s|delivered|107|20;c|no_answer|107|423"],["20138","Karen Harris","LeadBridge","2026-05-07T19:55:00","245.611.8191","karen.harris18@example.com",1,1,"s","completed",5,"","","","c|voicemail|120|5;s|delivered|120|24;c|completed|120|245"],["20139","Karen Harris","AgentMatch Pro","2026-05-08T22:55:00","+12456118191","karen.harris74@example.com",1,1,"s","no_answer",10,"","","","c|voicemail|138|10;s|delivered|138|18;c|no_answer|138|310"],["20140","Maria Lopez","AgentMatch Pro","2026-05-15T13:26:00","858-887-7244","maria.lopez49@example.com",1,1,"b","completed",10,"duplicate","20141","first","c|voicemail|127|10;s|delivered|127|30;c|completed|127|310"],["20141","Maria Lopez","HomeFlow","2026-05-15T21:26:00","858-887-7244","maria.lopez39@example.com",1,1,"s","delivered",5,"duplicate","20140","second","c|no_answer|122|5;s|delivered|122|22"],["20142","Robert Jackson","HomeFlow","2026-05-14T16:38:00","(941) 395-1844",null,1,1,"s","delivered",5,"missing_email","","","c|no_answer|108|5;s|delivered|108|23"],["20143","Robert Jackson","SellFast Direct","2026-05-15T8:38:00","+19413951844","robert.jackson43@example.com",1,1,"s","completed",11,"","","","c|no_answer|114|11;s|delivered|114|21;c|completed|114|491"],["20144","Matt Jackson","HomeFlow","2026-05-12T14:29:00","8645676053","matt.jackson93@example.com",1,1,"s","completed",2,"duplicate","20145","first","c|no_answer|117|2;s|delivered|117|18;c|completed|117|182"],["20145","Matt Jackson","ListingLoop","2026-05-13T2:29:00","864.567.6053","matt.jackson6@example.com",1,1,"s","completed",8,"duplicate","20144","second","c|voicemail|137|8;s|delivered|137|26;c|completed|137|428"],["20146","Greg Walker","SellFast Direct","2026-05-15T19:22:00","700.940.9037","greg.walker93@example.com",1,1,"s","completed",3,"duplicate","20147","first","c|no_answer|104|3;s|delivered|104|19;c|completed|104|423"],["20147","Greg Walker","LeadBridge","2026-05-17T1:22:00","(700) 940-9037","greg.walker83@example.com",1,1,"s","completed",4,"duplicate","20146","second","c|completed|101|4"],["20148","Matt Lopez","ListingLoop","2026-05-04T7:34:00","(261) 832-8916","matt.lopez2@example.com",1,1,"s","completed",3,"duplicate","20149","first","c|no_answer|107|3;s|delivered|107|13;c|completed|107|363"],["20149","Matt Lopez","SellFast Direct","2026-05-05T1:34:00","261.832.8916","matt.lopez3@example.com",1,1,"s","no_answer",7,"duplicate","20148","second","c|no_answer|118|7;s|delivered|118|12;c|no_answer|118|307"],["20150","Karen White","ListingLoop","2026-05-05T13:24:00","(431) 507-2320","karen.white61@example.com",1,1,"s","completed",10,"","","","c|completed|103|10"],["20151","Karen White","OfferNest","2026-05-05T16:24:00","+14315072320","karen.white56@example.com",1,1,"s","completed",11,"","","","c|completed|131|11"],["20152","Megan Young","LeadBridge","2026-05-17T12:01:00","487-756-1539","megan.young76@example.com",0,1,"s","delivered",6,"consent_violation","","","c|no_answer|111|6;s|delivered|111|11"],["20153","Megan Allen","ListingLoop","2026-05-06T19:44:00","+17535397288","megan.allen65@example.com",null,1,"s","delivered",8,"consent_violation,missing_consent_field","","","c|no_answer|115|8;s|delivered|115|11"],["20154","Ashley Clark","HomeFlow","2026-05-04T17:17:00","8288097499","ashley.clark58@example.com",null,1,"s","delivered",10,"consent_violation,missing_consent_field","","","c|no_answer|125|10;s|delivered|125|18"],["20155","Megan Martin","AgentMatch Pro","2026-05-08T19:15:00","+18765892404","megan.martin11@example.com",0,1,"b","delivered",12,"consent_violation","","","c|no_answer|110|12;s|delivered|110|20"],["20156","Nancy Brown","SellFast Direct","2026-05-09T19:17:00","293-205-6050","nancy.brown12@example.com",null,1,"b","delivered",10,"consent_violation,missing_consent_field","","","c|no_answer|136|10;s|delivered|136|20"],["20157","Linda Smith","AgentMatch Pro","2026-05-13T19:20:00","+12915622524","linda.smith2@example.com",null,1,"b","delivered",3,"consent_violation,missing_consent_field","","","c|no_answer|136|3;s|delivered|136|8"],["20158","Megan Wilson","HomeFlow","2026-05-08T14:09:00","3733425405",null,0,1,"b","delivered",6,"consent_violation,missing_email","","","c|no_answer|131|6;s|delivered|131|9"],["20159","John Davis","AgentMatch Pro","2026-05-13T10:29:00","(938) 840-9123","john.davis39@example.com",null,1,"s","delivered",11,"consent_violation,missing_consent_field","","","c|no_answer|125|11;s|delivered|125|18"],["20160","Matt Hernandez","HomeFlow","2026-05-09T16:44:00","640-866-3230","matt.hernandez41@example.com",1,1,"s","failed_err30006_landline",12,"sms_dead_end","","","s|failed_err30006_landline|119|12;s|failed_err30006_landline|119|19;s|failed_err30006_landline|119|26"],["20161","Kevin Lewis","HomeFlow","2026-05-17T19:25:00","448-533-7161","kevin.lewis73@example.com",1,1,"s","failed_err30006_landline",2,"sms_dead_end","","","s|failed_err30006_landline|136|2;s|failed_err30006_landline|136|9;s|failed_err30006_landline|136|16"],["20162","Scott Miller","SellFast Direct","2026-05-14T14:08:00","+16484982133","scott.miller31@example.com",1,1,"b","failed_err30006_landline",3,"sms_dead_end","","","s|failed_err30006_landline|125|3;s|failed_err30006_landline|125|10;s|failed_err30006_landline|125|17"],["20163","Ashley Taylor","AgentMatch Pro","2026-05-17T18:26:00","796.610.9755","ashley.taylor47@example.com",1,1,"s","failed_err30006_landline",5,"sms_dead_end","","","s|failed_err30006_landline|107|5;s|failed_err30006_landline|107|12;s|failed_err30006_landline|107|19"],["20164","Sarah Perez","HomeFlow","2026-05-16T13:06:00","+18272457547",null,1,1,"s","failed_err30006_landline",7,"sms_dead_end,missing_email","","","s|failed_err30006_landline|129|7;s|failed_err30006_landline|129|14;s|failed_err30006_landline|129|21"],["20165","Matt Clark","LeadBridge","2026-05-09T7:30:00","(895) 802-9199","matt.clark54@example.com",1,1,"s","failed_err30006_landline",6,"sms_dead_end","","","s|failed_err30006_landline|123|6;s|failed_err30006_landline|123|13;s|failed_err30006_landline|123|20"],["20166","Matt Lewis","HomeFlow","2026-05-11T8:28:00","+14117338912","matt.lewis58@example.com",1,1,"s","failed_err30006_landline",3,"sms_dead_end","","","s|failed_err30006_landline|103|3;s|failed_err30006_landline|103|10"],["20167","Diana Hernandez","ListingLoop","2026-05-07T15:11:00","863.311.3692","diana.hernandez43@example.com",1,1,"b","failed_err30006_landline",8,"sms_dead_end","","","s|failed_err30006_landline|115|8;s|failed_err30006_landline|115|15"],["20168","Sarah Perez","OfferNest","2026-05-15T16:56:00","8736427481","sarah.perez76@example.com",1,1,"s","failed_err30006_landline",5,"sms_dead_end","","","s|failed_err30006_landline|114|5;s|failed_err30006_landline|114|12;s|failed_err30006_landline|114|19"],["20169","Greg White","AgentMatch Pro","2026-05-06T12:20:00","+12647912667","greg.white15@example.com",1,1,"s","failed_err30006_landline",8,"sms_dead_end","","","s|failed_err30006_landline|139|8;s|failed_err30006_landline|139|15;s|failed_err30006_landline|139|22"],["20170","Kevin Brown","AgentMatch Pro","2026-05-06T17:45:00","556.560.8501","kevin.brown79@example.com",1,1,"s","failed_err30006_landline",3,"sms_dead_end","","","s|failed_err30006_landline|121|3;s|failed_err30006_landline|121|10"],["20171","Lisa Brown","AgentMatch Pro","2026-05-10T13:38:00","3875823316","lisa.brown50@example.com",1,1,"b","failed_err30006_landline",12,"sms_dead_end","","","s|failed_err30006_landline|135|12;s|failed_err30006_landline|135|19"],["20172","Jessica Garcia","LeadBridge","2026-05-09T14:39:00","+17014953298",null,1,1,"b","no_answer",4,"missing_email","","","c|no_answer|113|4"],["20173","Tony Wilson","SellFast Direct","2026-05-14T14:26:00","7757179109","tony.wilson57@example.com",1,1,"s","no_answer",11,"","","","c|no_answer|102|11"],["20174","Laura Clark","HomeFlow","2026-05-07T15:18:00","425.499.1535","laura.clark59@example.com",1,1,"s","no_answer",11,"","","","c|no_answer|108|11"],["20175","John Clark","OfferNest","2026-05-16T18:28:00","(756) 575-9880","john.clark55@example.com",1,1,"s","no_answer",2,"","","","c|no_answer|129|2"],["20176","John Lopez","LeadBridge","2026-05-07T19:47:00","289.649.2923","john.lopez45@example.com",1,1,"s","no_answer",11,"","","","c|no_answer|109|11"],["20177","Laura Miller","AgentMatch Pro","2026-05-08T16:34:00","+14112606747","laura.miller91@example.com",1,1,"s","no_answer",10,"","","","c|no_answer|107|10"],["20178","Michael Clark","ListingLoop","2026-05-06T18:55:00","+16212605543","michael.clark19@example.com",1,1,"b","no_answer",9,"","","","c|no_answer|110|9"],["20179","Kevin Perez","SellFast Direct","2026-05-11T8:40:00","(475) 842-7786","kevin.perez99@example.com",1,1,"s","no_answer",7,"","","","c|no_answer|130|7"],["20180","Amanda Hernandez","ListingLoop","2026-05-11T17:42:00","795.202.2526","amanda.hernandez9@example.com",1,1,"s","no_answer",8,"","","","c|no_answer|114|8"],["20181","Amanda Rodriguez","AgentMatch Pro","2026-05-13T9:36:00","(530) 490-6533","amanda.rodriguez44@example.com",1,1,"s","no_answer",12,"","","","c|no_answer|130|12"],["20182","James Brown","OfferNest","2026-05-10T10:44:00","+13616518479","james.brown84@example.com",1,1,"s","no_answer",3,"","","","c|no_answer|124|3"],["20183","John Williams","OfferNest","2026-05-10T17:19:00","580-880-3711","john.williams97@example.com",1,1,"s","no_answer",3,"","","","c|no_answer|101|3"],["20184","David Taylor","AgentMatch Pro","2026-05-14T14:00:00","+12793354705",null,1,1,"b","no_answer",4,"missing_email","","","c|no_answer|131|4"],["20185","Robert Davis","OfferNest","2026-05-09T12:56:00","592-291-2678","robert.davis49@example.com",1,1,"s","no_answer",10,"","","","c|no_answer|137|10"],["20186","James Lee","HomeFlow","2026-05-15T10:40:00","865.368.8210","james.lee53@example.com",1,1,"s","no_answer",3,"","","","c|no_answer|107|3"],["20187","Michael Clark","LeadBridge","2026-05-09T13:20:00","+13268037291","michael.clark32@example.com",1,1,"s","delivered",271,"slow_response","","","c|no_answer|139|271;s|delivered|139|283"],["20188","Scott Smith","LeadBridge","2026-05-12T16:32:00","+18745084366","scott.smith51@example.com",1,1,"s","completed",256,"slow_response","","","c|completed|125|256"],["20189","Amanda Perez","LeadBridge","2026-05-04T12:59:00","808.272.9655","amanda.perez50@example.com",1,1,"s","completed",269,"slow_response","","","c|no_answer|112|269;s|delivered|112|274;c|completed|112|389"],["20190","David Johnson","LeadBridge","2026-05-08T17:45:00","2616079300","david.johnson54@example.com",1,1,"s","completed",293,"slow_response","","","c|no_answer|135|293;s|delivered|135|300;c|completed|135|533"],["20191","Heather Miller","LeadBridge","2026-05-10T16:40:00","(359) 749-6353","heather.miller84@example.com",1,1,"b","completed",316,"slow_response","","","c|completed|116|316"],["20192","Robert Young","LeadBridge","2026-05-13T16:03:00","644-318-8428","robert.young95@example.com",1,1,"s","no_answer",311,"slow_response","","","c|no_answer|109|311;s|delivered|109|319;c|no_answer|109|551"],["20193","Laura Walker","LeadBridge","2026-05-09T9:47:00","(938) 465-3735","laura.walker35@example.com",1,1,"s","completed",336,"slow_response","","","c|completed|128|336"],["20194","Robert Rodriguez","LeadBridge","2026-05-11T14:32:00","929.790.2262","robert.rodriguez64@example.com",1,1,"s","completed",170,"slow_response","","","c|no_answer|117|170;s|delivered|117|176;c|completed|117|530"],["20195","Diana Hall","LeadBridge","2026-05-11T12:24:00","(212) 450-1753","diana.hall23@example.com",1,1,"b","completed",187,"slow_response","","","c|completed|121|187"],["20196","Heather Harris","LeadBridge","2026-05-13T12:07:00","527-477-2276","heather.harris7@example.com",1,1,"s","delivered",232,"slow_response","","","c|voicemail|105|232;s|delivered|105|244"],["20197","Lisa Hernandez","LeadBridge","2026-05-04T12:12:00","288.766.8483","lisa.hernandez39@example.com",1,1,"b","delivered",224,"slow_response","","","c|voicemail|138|224;s|delivered|138|233"],["20198","Jessica Clark","LeadBridge","2026-05-10T7:14:00","(451) 354-1104","jessica.clark82@example.com",1,1,"s","no_answer",324,"slow_response","","","c|voicemail|125|324;s|delivered|125|336;c|no_answer|125|684"],["20199","Emily Taylor","LeadBridge","2026-05-05T7:58:00","2613455584","emily.taylor67@example.com",1,1,"b","completed",321,"slow_response","","","c|no_answer|106|321;s|delivered|106|340;c|completed|106|801"],["20200","Kevin Martin","LeadBridge","2026-05-07T11:16:00","+12636453141","kevin.martin51@example.com",1,1,"b","completed",199,"slow_response","","","c|completed|115|199"],["20201","David Jones","LeadBridge","2026-05-06T8:10:00","9887982785","david.jones41@example.com",1,1,"s","completed",327,"slow_response","","","c|no_answer|114|327;s|delivered|114|344;c|completed|114|447"],["20202","Laura Thompson","LeadBridge","2026-05-07T12:09:00","+15119211660","laura.thompson32@example.com",1,1,"s","completed",303,"slow_response","","","c|completed|120|303"],["20203","Sarah Smith","LeadBridge","2026-05-05T14:06:00","(614) 663-5093","sarah.smith18@example.com",1,1,"s","completed",342,"slow_response","","","c|completed|115|342"],["20204","Tony Wilson","LeadBridge","2026-05-13T16:16:00","(581) 902-2376","tony.wilson10@example.com",1,1,"s","delivered",361,"slow_response","","","c|voicemail|129|361;s|delivered|129|366"],["20205","Tony Lewis","LeadBridge","2026-05-11T7:10:00","5393251699","tony.lewis56@example.com",1,1,"s","completed",227,"slow_response","","","c|completed|128|227"],["20206","David Young","LeadBridge","2026-05-11T9:02:00","391-481-5585","david.young79@example.com",1,1,"b","no_answer",235,"slow_response","","","c|no_answer|136|235;s|delivered|136|240;c|no_answer|136|415"]];
+const ATTEMPTS_TUPLE = [["1128","20063","c","2026-05-04T11:38:00","N","135"],["1145","20071","c","2026-05-04T11:43:00","N","107"],["1129","20063","s","2026-05-04T11:45:00","D","135"],["1146","20071","s","2026-05-04T12:03:00","D","107"],["1189","20094","c","2026-05-04T13:11:00","C","113"],["1271","20148","c","2026-05-04T13:37:00","C","107"],["1177","20089","c","2026-05-04T13:39:00","V","107"],["1178","20089","s","2026-05-04T13:52:00","D","107"],["1360","20197","c","2026-05-04T15:56:00","V","138"],["1361","20197","s","2026-05-04T16:05:00","D","138"],["1281","20154","c","2026-05-04T17:27:00","N","125"],["1343","20189","c","2026-05-04T17:28:00","N","112"],["1344","20189","s","2026-05-04T17:33:00","D","112"],["1282","20154","s","2026-05-04T17:35:00","D","125"],["1102","20050","c","2026-05-04T17:41:00","V","115"],["1110","20054","c","2026-05-04T18:16:00","N","140"],["1111","20054","s","2026-05-04T18:21:00","D","140"],["1130","20064","c","2026-05-04T18:33:00","C","123"],["1070","20034","c","2026-05-04T18:39:00","V","113"],["1071","20034","s","2026-05-04T18:46:00","D","113"],["1345","20189","c","2026-05-04T19:28:00","C","112"],["1147","20071","c","2026-05-04T19:43:00","C","107"],["1072","20034","c","2026-05-04T23:39:00","N","113"],["1269","20148","c","2026-05-04T7:37:00","N","107"],["1270","20148","s","2026-05-04T7:47:00","D","107"],["1119","20058","c","2026-05-05T10:30:00","N","101"],["1120","20058","s","2026-05-05T10:34:00","D","101"],["1156","20077","c","2026-05-05T13:09:00","C","107"],["1365","20199","c","2026-05-05T13:19:00","N","106"],["1275","20150","c","2026-05-05T13:34:00","C","103"],["1366","20199","s","2026-05-05T13:38:00","D","106"],["1158","20078","c","2026-05-05T15:43:00","C","110"],["1157","20077","c","2026-05-05T16:09:00","C","107"],["1032","20016","c","2026-05-05T16:15:00","N","106"],["1033","20016","s","2026-05-05T16:34:00","D","106"],["1276","20151","c","2026-05-05T16:35:00","C","131"],["1086","20043","c","2026-05-05T16:43:00","N","136"],["1087","20043","s","2026-05-05T16:53:00","D","136"],["1062","20030","c","2026-05-05T18:23:00","N","125"],["1063","20030","s","2026-05-05T18:32:00","D","125"],["1175","20088","c","2026-05-05T19:04:00","V","110"],["1176","20088","s","2026-05-05T19:09:00","D","110"],["1190","20095","c","2026-05-05T19:32:00","N","132"],["1373","20203","c","2026-05-05T19:48:00","C","115"],["1191","20095","s","2026-05-05T19:51:00","D","132"],["1272","20149","c","2026-05-05T1:41:00","N","118"],["1273","20149","s","2026-05-05T1:46:00","D","118"],["1034","20016","c","2026-05-05T20:15:00","C","106"],["1367","20199","c","2026-05-05T21:19:00","C","106"],["1192","20095","c","2026-05-05T21:32:00","N","132"],["1064","20030","c","2026-05-05T23:23:00","C","125"],["1274","20149","c","2026-05-05T6:41:00","N","118"],["1318","20169","s","2026-05-06T12:28:00","F","139"],["1319","20169","s","2026-05-06T12:35:00","F","139"],["1320","20169","s","2026-05-06T12:42:00","F","139"],["1369","20201","c","2026-05-06T13:37:00","N","114"],["1370","20201","s","2026-05-06T13:54:00","D","114"],["1016","20008","c","2026-05-06T14:12:00","V","120"],["1371","20201","c","2026-05-06T15:37:00","C","114"],["1073","20035","c","2026-05-06T16:44:00","N","137"],["1197","20098","c","2026-05-06T17:38:00","N","124"],["1019","20010","c","2026-05-06T17:40:00","N","113"],["1321","20170","s","2026-05-06T17:48:00","F","121"],["1322","20170","s","2026-05-06T17:55:00","F","121"],["1331","20178","c","2026-05-06T19:04:00","N","110"],["1017","20008","c","2026-05-06T19:12:00","C","120"],["1124","20061","c","2026-05-06T19:22:00","C","101"],["1092","20046","c","2026-05-06T19:25:00","V","126"],["1093","20046","s","2026-05-06T19:44:00","D","126"],["1047","20022","c","2026-05-06T19:51:00","V","120"],["1279","20153","c","2026-05-06T19:52:00","N","115"],["1280","20153","s","2026-05-06T19:55:00","D","115"],["1048","20022","s","2026-05-06T20:01:00","D","120"],["1094","20046","c","2026-05-07T0:25:00","C","126"],["1020","20010","c","2026-05-07T0:40:00","N","113"],["1215","20125","c","2026-05-07T11:07:00","N","119"],["1031","20015","c","2026-05-07T11:15:00","N","138"],["1222","20129","c","2026-05-07T12:06:00","N","124"],["1223","20129","s","2026-05-07T12:10:00","D","124"],["1153","20075","c","2026-05-07T13:45:00","C","108"],["1368","20200","c","2026-05-07T14:35:00","C","115"],["1313","20167","s","2026-05-07T15:19:00","F","115"],["1314","20167","s","2026-05-07T15:26:00","F","115"],["1327","20174","c","2026-05-07T15:29:00","N","108"],["1027","20013","c","2026-05-07T15:38:00","C","107"],["1225","20130","c","2026-05-07T17:05:00","N","109"],["1224","20129","c","2026-05-07T17:06:00","C","124"],["1044","20021","c","2026-05-07T17:10:00","V","112"],["1372","20202","c","2026-05-07T17:12:00","C","120"],["1045","20021","s","2026-05-07T17:13:00","D","112"],["1226","20130","s","2026-05-07T17:22:00","D","109"],["1131","20065","c","2026-05-07T17:51:00","C","114"],["1038","20019","c","2026-05-07T18:23:00","N","106"],["1039","20019","s","2026-05-07T18:34:00","D","106"],["1012","20006","c","2026-05-07T18:40:00","N","109"],["1013","20006","s","2026-05-07T18:45:00","D","109"],["1200","20101","c","2026-05-07T19:17:00","C","136"],["1329","20176","c","2026-05-07T19:58:00","N","109"],["1243","20138","c","2026-05-07T20:00:00","V","120"],["1244","20138","s","2026-05-07T20:19:00","D","120"],["1046","20021","c","2026-05-07T21:10:00","N","112"],["1040","20019","c","2026-05-07T22:23:00","N","106"],["1125","20061","c","2026-05-07T2:22:00","N","101"],["1049","20022","c","2026-05-07T2:51:00","C","120"],["1213","20125","c","2026-05-07T8:07:00","N","119"],["1214","20125","s","2026-05-07T8:12:00","D","119"],["1080","20039","c","2026-05-07T8:24:00","C","102"],["1001","20001","c","2026-05-07T9:49:00","C","102"],["1245","20138","c","2026-05-08T0:00:00","C","120"],["1212","20124","c","2026-05-08T11:03:00","C","127"],["1227","20131","c","2026-05-08T12:10:00","N","129"],["1142","20070","c","2026-05-08T12:12:00","V","124"],["1228","20131","s","2026-05-08T12:24:00","D","129"],["1114","20056","c","2026-05-08T12:27:00","N","106"],["1143","20070","s","2026-05-08T12:32:00","D","124"],["1037","20018","c","2026-05-08T12:40:00","N","107"],["1115","20056","s","2026-05-08T12:42:00","D","106"],["1136","20067","c","2026-05-08T13:15:00","C","133"],["1166","20082","c","2026-05-08T13:29:00","N","136"],["1167","20082","s","2026-05-08T13:41:00","D","136"],["1289","20158","c","2026-05-08T14:15:00","N","131"],["1097","20047","c","2026-05-08T14:16:00","N","103"],["1290","20158","s","2026-05-08T14:18:00","D","131"],["1116","20056","c","2026-05-08T15:27:00","N","106"],["1103","20051","c","2026-05-08T15:53:00","V","113"],["1217","20127","c","2026-05-08T16:06:00","V","113"],["1104","20051","s","2026-05-08T16:12:00","D","113"],["1218","20127","s","2026-05-08T16:19:00","D","113"],["1330","20177","c","2026-05-08T16:44:00","N","107"],["1117","20057","c","2026-05-08T17:09:00","V","123"],["1229","20131","c","2026-05-08T18:10:00","C","129"],["1144","20070","c","2026-05-08T18:12:00","N","124"],["1283","20155","c","2026-05-08T19:27:00","N","110"],["1284","20155","s","2026-05-08T19:35:00","D","110"],["1219","20127","c","2026-05-08T21:06:00","N","113"],["1168","20082","c","2026-05-08T21:29:00","N","136"],["1346","20190","c","2026-05-08T22:38:00","N","135"],["1347","20190","s","2026-05-08T22:45:00","D","135"],["1246","20139","c","2026-05-08T23:05:00","V","138"],["1247","20139","s","2026-05-08T23:13:00","D","138"],["1083","20042","c","2026-05-08T7:14:00","N","119"],["1134","20067","c","2026-05-08T7:15:00","N","133"],["1095","20047","c","2026-05-08T7:16:00","N","103"],["1096","20047","s","2026-05-08T7:24:00","D","103"],["1084","20042","s","2026-05-08T7:31:00","D","119"],["1135","20067","s","2026-05-08T7:32:00","D","133"],["1085","20042","c","2026-05-08T9:14:00","C","119"],["1036","20018","c","2026-05-08T9:40:00","V","107"],["1186","20092","c","2026-05-09T10:42:00","C","103"],["1023","20011","c","2026-05-09T11:40:00","N","103"],["1003","20003","c","2026-05-09T12:46:00","N","106"],["1004","20003","s","2026-05-09T13:00:00","D","106"],["1338","20185","c","2026-05-09T13:06:00","N","137"],["1195","20096","c","2026-05-09T13:14:00","C","123"],["1018","20009","c","2026-05-09T14:12:00","C","106"],["1325","20172","c","2026-05-09T14:43:00","N","113"],["1353","20193","c","2026-05-09T15:23:00","C","128"],["1230","20132","c","2026-05-09T15:37:00","C","137"],["1293","20160","s","2026-05-09T16:56:00","F","119"],["1294","20160","s","2026-05-09T17:03:00","F","119"],["1295","20160","s","2026-05-09T17:10:00","F","119"],["1340","20187","c","2026-05-09T17:51:00","N","139"],["1341","20187","s","2026-05-09T18:03:00","D","139"],["1132","20066","c","2026-05-09T19:13:00","N","108"],["1285","20156","c","2026-05-09T19:27:00","N","136"],["1286","20156","s","2026-05-09T19:37:00","D","136"],["1005","20003","c","2026-05-09T19:46:00","C","106"],["1009","20005","c","2026-05-09T19:54:00","V","137"],["1118","20057","c","2026-05-09T1:09:00","N","123"],["1010","20005","s","2026-05-09T20:07:00","D","137"],["1133","20066","c","2026-05-09T21:13:00","C","108"],["1348","20190","c","2026-05-09T2:38:00","C","135"],["1248","20139","c","2026-05-09T4:05:00","N","138"],["1216","20126","c","2026-05-09T7:06:00","C","103"],["1308","20165","s","2026-05-09T7:36:00","F","123"],["1021","20011","c","2026-05-09T7:40:00","V","103"],["1309","20165","s","2026-05-09T7:43:00","F","123"],["1022","20011","s","2026-05-09T7:45:00","D","103"],["1310","20165","s","2026-05-09T7:50:00","F","123"],["1193","20096","c","2026-05-09T8:14:00","N","123"],["1194","20096","s","2026-05-09T8:28:00","D","123"],["1184","20092","c","2026-05-09T8:42:00","N","103"],["1185","20092","s","2026-05-09T8:56:00","D","103"],["1220","20128","c","2026-05-09T9:03:00","N","126"],["1221","20128","s","2026-05-09T9:11:00","D","126"],["1011","20005","c","2026-05-10T0:54:00","C","137"],["1335","20182","c","2026-05-10T10:47:00","N","124"],["1107","20053","c","2026-05-10T11:06:00","N","110"],["1108","20053","s","2026-05-10T11:10:00","D","110"],["1006","20004","c","2026-05-10T11:41:00","N","105"],["1007","20004","s","2026-05-10T11:49:00","D","105"],["1055","20025","c","2026-05-10T12:36:00","C","137"],["1362","20198","c","2026-05-10T12:38:00","V","125"],["1363","20198","s","2026-05-10T12:50:00","D","125"],["1323","20171","s","2026-05-10T13:50:00","F","135"],["1324","20171","s","2026-05-10T13:57:00","F","135"],["1068","20032","c","2026-05-10T14:12:00","C","135"],["1151","20073","c","2026-05-10T14:23:00","C","110"],["1028","20014","c","2026-05-10T14:38:00","V","117"],["1008","20004","c","2026-05-10T14:41:00","C","105"],["1029","20014","s","2026-05-10T14:55:00","D","117"],["1014","20007","c","2026-05-10T16:16:00","N","108"],["1015","20007","s","2026-05-10T16:36:00","D","108"],["1109","20053","c","2026-05-10T17:06:00","C","110"],["1336","20183","c","2026-05-10T17:22:00","N","101"],["1364","20198","c","2026-05-10T18:38:00","N","125"],["1056","20026","c","2026-05-10T19:41:00","C","106"],["1231","20133","c","2026-05-10T20:37:00","N","120"],["1232","20133","s","2026-05-10T20:52:00","D","120"],["1030","20014","c","2026-05-10T21:38:00","N","117"],["1349","20191","c","2026-05-10T21:56:00","C","116"],["1233","20133","c","2026-05-10T22:37:00","N","120"],["1376","20205","c","2026-05-11T10:57:00","C","128"],["1098","20048","c","2026-05-11T12:32:00","V","126"],["1099","20048","s","2026-05-11T12:52:00","D","126"],["1377","20206","c","2026-05-11T12:57:00","N","136"],["1378","20206","s","2026-05-11T13:02:00","D","136"],["1100","20048","c","2026-05-11T14:32:00","C","126"],["1179","20090","c","2026-05-11T14:49:00","N","139"],["1180","20090","s","2026-05-11T14:55:00","D","139"],["1357","20195","c","2026-05-11T15:31:00","C","121"],["1379","20206","c","2026-05-11T15:57:00","N","136"],["1354","20194","c","2026-05-11T17:22:00","N","117"],["1355","20194","s","2026-05-11T17:28:00","D","117"],["1333","20180","c","2026-05-11T17:50:00","N","114"],["1089","20045","c","2026-05-11T18:41:00","V","115"],["1090","20045","s","2026-05-11T18:50:00","D","115"],["1356","20194","c","2026-05-11T23:22:00","C","117"],["1173","20086","c","2026-05-11T7:31:00","C","135"],["1311","20166","s","2026-05-11T8:31:00","F","103"],["1312","20166","s","2026-05-11T8:38:00","F","103"],["1332","20179","c","2026-05-11T8:47:00","N","130"],["1091","20045","c","2026-05-12T0:41:00","C","115"],["1050","20023","c","2026-05-12T13:54:00","C","117"],["1237","20135","c","2026-05-12T14:03:00","N","135"],["1198","20099","c","2026-05-12T14:07:00","C","113"],["1238","20135","s","2026-05-12T14:10:00","D","135"],["1259","20144","c","2026-05-12T14:31:00","N","117"],["1260","20144","s","2026-05-12T14:47:00","D","117"],["1206","20103","c","2026-05-12T15:00:00","N","134"],["1236","20134","c","2026-05-12T16:08:00","C","125"],["1207","20104","c","2026-05-12T17:21:00","V","103"],["1208","20104","s","2026-05-12T17:24:00","D","103"],["1261","20144","c","2026-05-12T17:31:00","C","117"],["1196","20097","c","2026-05-12T19:51:00","C","105"],["1342","20188","c","2026-05-12T20:48:00","C","125"],["1051","20023","c","2026-05-12T20:54:00","N","117"],["1204","20103","c","2026-05-12T8:00:00","V","134"],["1205","20103","s","2026-05-12T8:05:00","D","134"],["1234","20134","c","2026-05-12T8:08:00","N","125"],["1235","20134","s","2026-05-12T8:28:00","D","125"],["1209","20104","c","2026-05-13T0:21:00","N","103"],["1052","20024","c","2026-05-13T10:24:00","V","105"],["1053","20024","s","2026-05-13T10:37:00","D","105"],["1291","20159","c","2026-05-13T10:40:00","N","125"],["1292","20159","s","2026-05-13T10:47:00","D","125"],["1081","20040","c","2026-05-13T12:39:00","C","118"],["1162","20080","c","2026-05-13T13:28:00","C","105"],["1174","20087","c","2026-05-13T14:34:00","C","139"],["1139","20069","c","2026-05-13T15:26:00","V","129"],["1140","20069","s","2026-05-13T15:42:00","D","129"],["1358","20196","c","2026-05-13T15:59:00","V","105"],["1359","20196","s","2026-05-13T16:11:00","D","105"],["1088","20044","c","2026-05-13T16:15:00","C","106"],["1054","20024","c","2026-05-13T17:24:00","N","105"],["1079","20038","c","2026-05-13T17:31:00","C","117"],["1060","20029","c","2026-05-13T19:06:00","N","117"],["1061","20029","s","2026-05-13T19:17:00","D","117"],["1287","20157","c","2026-05-13T19:23:00","N","136"],["1288","20157","s","2026-05-13T19:28:00","D","136"],["1141","20069","c","2026-05-13T20:26:00","C","129"],["1350","20192","c","2026-05-13T21:14:00","N","109"],["1351","20192","s","2026-05-13T21:22:00","D","109"],["1374","20204","c","2026-05-13T22:17:00","V","129"],["1375","20204","s","2026-05-13T22:22:00","D","129"],["1262","20145","c","2026-05-13T2:37:00","V","137"],["1263","20145","s","2026-05-13T2:55:00","D","137"],["1160","20080","c","2026-05-13T7:28:00","N","105"],["1161","20080","s","2026-05-13T7:33:00","D","105"],["1264","20145","c","2026-05-13T9:37:00","C","137"],["1334","20181","c","2026-05-13T9:48:00","N","130"],["1169","20083","c","2026-05-14T10:04:00","N","136"],["1170","20083","s","2026-05-14T10:17:00","D","136"],["1163","20081","c","2026-05-14T10:23:00","N","133"],["1164","20081","s","2026-05-14T10:27:00","D","133"],["1126","20062","c","2026-05-14T10:42:00","N","105"],["1121","20059","c","2026-05-14T10:45:00","C","129"],["1127","20062","s","2026-05-14T10:59:00","D","105"],["1138","20068","c","2026-05-14T11:06:00","C","106"],["1057","20027","c","2026-05-14T11:23:00","V","127"],["1069","20033","c","2026-05-14T13:17:00","C","121"],["1152","20074","c","2026-05-14T13:39:00","C","108"],["1337","20184","c","2026-05-14T14:04:00","N","131"],["1299","20162","s","2026-05-14T14:11:00","F","125"],["1300","20162","s","2026-05-14T14:18:00","F","125"],["1301","20162","s","2026-05-14T14:25:00","F","125"],["1326","20173","c","2026-05-14T14:37:00","N","102"],["1076","20037","c","2026-05-14T14:54:00","V","128"],["1077","20037","s","2026-05-14T15:05:00","D","128"],["1165","20081","c","2026-05-14T15:23:00","N","133"],["1254","20142","c","2026-05-14T16:43:00","N","108"],["1255","20142","s","2026-05-14T17:01:00","D","108"],["1035","20017","c","2026-05-14T17:22:00","C","135"],["1171","20084","c","2026-05-14T17:34:00","C","132"],["1078","20037","c","2026-05-14T17:54:00","N","128"],["1148","20072","c","2026-05-14T18:19:00","V","112"],["1149","20072","s","2026-05-14T18:34:00","D","112"],["1002","20002","c","2026-05-14T18:41:00","C","118"],["1239","20136","c","2026-05-14T18:45:00","C","102"],["1058","20027","c","2026-05-14T19:23:00","N","127"],["1181","20091","c","2026-05-14T19:51:00","N","133"],["1182","20091","s","2026-05-14T19:58:00","D","133"],["1352","20192","c","2026-05-14T1:14:00","N","109"],["1183","20091","c","2026-05-14T21:51:00","N","133"],["1137","20068","c","2026-05-14T7:06:00","C","106"],["1210","20105","c","2026-05-14T7:43:00","C","126"],["1211","20105","c","2026-05-14T9:43:00","C","126"],["1154","20076","c","2026-05-15T10:40:00","N","102"],["1339","20186","c","2026-05-15T10:43:00","N","107"],["1155","20076","s","2026-05-15T10:45:00","D","102"],["1122","20060","c","2026-05-15T13:15:00","V","117"],["1123","20060","s","2026-05-15T13:33:00","D","117"],["1249","20140","c","2026-05-15T13:36:00","V","127"],["1242","20137","c","2026-05-15T13:37:00","N","107"],["1041","20020","c","2026-05-15T13:42:00","N","138"],["1250","20140","s","2026-05-15T13:56:00","D","127"],["1042","20020","s","2026-05-15T13:58:00","D","138"],["1201","20102","c","2026-05-15T14:45:00","N","105"],["1202","20102","s","2026-05-15T15:04:00","D","105"],["1082","20041","c","2026-05-15T15:51:00","C","113"],["1258","20143","c","2026-05-15T16:49:00","C","114"],["1315","20168","s","2026-05-15T17:01:00","F","114"],["1316","20168","s","2026-05-15T17:08:00","F","114"],["1317","20168","s","2026-05-15T17:15:00","F","114"],["1043","20020","c","2026-05-15T17:42:00","C","138"],["1251","20140","c","2026-05-15T18:36:00","C","127"],["1265","20146","c","2026-05-15T19:25:00","N","104"],["1074","20036","c","2026-05-15T19:29:00","N","128"],["1187","20093","c","2026-05-15T19:33:00","V","112"],["1112","20055","c","2026-05-15T19:36:00","N","106"],["1188","20093","s","2026-05-15T19:38:00","D","112"],["1266","20146","s","2026-05-15T19:41:00","D","104"],["1150","20072","c","2026-05-15T1:19:00","N","112"],["1252","20141","c","2026-05-15T21:31:00","N","122"],["1253","20141","s","2026-05-15T21:48:00","D","122"],["1113","20055","c","2026-05-15T22:36:00","N","106"],["1203","20102","c","2026-05-15T22:45:00","N","105"],["1240","20137","c","2026-05-15T6:37:00","N","107"],["1241","20137","s","2026-05-15T6:54:00","D","107"],["1256","20143","c","2026-05-15T8:49:00","N","114"],["1257","20143","s","2026-05-15T8:59:00","D","114"],["1305","20164","s","2026-05-16T13:13:00","F","129"],["1059","20028","c","2026-05-16T13:17:00","C","130"],["1306","20164","s","2026-05-16T13:20:00","F","129"],["1307","20164","s","2026-05-16T13:27:00","F","129"],["1024","20012","c","2026-05-16T14:59:00","V","130"],["1025","20012","s","2026-05-16T15:03:00","D","130"],["1105","20052","c","2026-05-16T15:21:00","N","129"],["1172","20085","c","2026-05-16T16:04:00","C","125"],["1065","20031","c","2026-05-16T16:51:00","N","120"],["1066","20031","s","2026-05-16T17:07:00","D","120"],["1159","20079","c","2026-05-16T17:43:00","C","121"],["1199","20100","c","2026-05-16T18:00:00","N","111"],["1328","20175","c","2026-05-16T18:30:00","N","129"],["1026","20012","c","2026-05-16T21:59:00","C","130"],["1106","20052","c","2026-05-16T23:21:00","N","129"],["1067","20031","c","2026-05-16T23:51:00","N","120"],["1267","20146","c","2026-05-16T2:25:00","C","104"],["1075","20036","c","2026-05-16T2:29:00","C","128"],["1277","20152","c","2026-05-17T12:07:00","N","111"],["1278","20152","s","2026-05-17T12:12:00","D","111"],["1101","20049","c","2026-05-17T15:31:00","C","114"],["1302","20163","s","2026-05-17T18:31:00","F","107"],["1303","20163","s","2026-05-17T18:38:00","F","107"],["1304","20163","s","2026-05-17T18:45:00","F","107"],["1296","20161","s","2026-05-17T19:27:00","F","136"],["1297","20161","s","2026-05-17T19:34:00","F","136"],["1298","20161","s","2026-05-17T19:41:00","F","136"],["1268","20147","c","2026-05-17T1:26:00","C","101"]];
+const AGENTS = [{"id":"AGT-106","leadsTouched":10,"attempts":22,"completed":7,"calls":17,"sms":5,"leadIds":["L-20003","L-20009","L-20016","L-20019","L-20026","L-20044","L-20055","L-20056","L-20068","L-20199"]},{"id":"AGT-107","leadsTouched":10,"attempts":21,"completed":4,"calls":14,"sms":7,"leadIds":["L-20013","L-20018","L-20071","L-20077","L-20089","L-20137","L-20148","L-20163","L-20177","L-20186"]},{"id":"AGT-125","leadsTouched":8,"attempts":18,"completed":4,"calls":10,"sms":8,"leadIds":["L-20030","L-20085","L-20134","L-20154","L-20159","L-20162","L-20188","L-20198"]},{"id":"AGT-136","leadsTouched":8,"attempts":18,"completed":1,"calls":9,"sms":9,"leadIds":["L-20043","L-20082","L-20083","L-20101","L-20156","L-20157","L-20161","L-20206"]},{"id":"AGT-105","leadsTouched":7,"attempts":17,"completed":3,"calls":11,"sms":6,"leadIds":["L-20004","L-20024","L-20062","L-20080","L-20097","L-20102","L-20196"]},{"id":"AGT-103","leadsTouched":7,"attempts":16,"completed":3,"calls":10,"sms":6,"leadIds":["L-20011","L-20047","L-20092","L-20104","L-20126","L-20150","L-20166"]},{"id":"AGT-117","leadsTouched":7,"attempts":16,"completed":4,"calls":11,"sms":5,"leadIds":["L-20014","L-20023","L-20029","L-20038","L-20060","L-20144","L-20194"]},{"id":"AGT-120","leadsTouched":6,"attempts":15,"completed":4,"calls":11,"sms":4,"leadIds":["L-20008","L-20022","L-20031","L-20133","L-20138","L-20202"]},{"id":"AGT-129","leadsTouched":7,"attempts":15,"completed":3,"calls":9,"sms":6,"leadIds":["L-20052","L-20059","L-20069","L-20131","L-20164","L-20175","L-20204"]},{"id":"AGT-113","leadsTouched":8,"attempts":14,"completed":3,"calls":11,"sms":3,"leadIds":["L-20010","L-20034","L-20041","L-20051","L-20094","L-20099","L-20127","L-20172"]},{"id":"AGT-135","leadsTouched":7,"attempts":12,"completed":4,"calls":7,"sms":5,"leadIds":["L-20017","L-20032","L-20063","L-20086","L-20135","L-20171","L-20190"]},{"id":"AGT-114","leadsTouched":6,"attempts":12,"completed":4,"calls":7,"sms":5,"leadIds":["L-20049","L-20065","L-20143","L-20168","L-20180","L-20201"]},{"id":"AGT-112","leadsTouched":4,"attempts":11,"completed":1,"calls":7,"sms":4,"leadIds":["L-20021","L-20072","L-20093","L-20189"]},{"id":"AGT-115","leadsTouched":6,"attempts":10,"completed":3,"calls":6,"sms":4,"leadIds":["L-20045","L-20050","L-20153","L-20167","L-20200","L-20203"]},{"id":"AGT-110","leadsTouched":6,"attempts":10,"completed":3,"calls":7,"sms":3,"leadIds":["L-20053","L-20073","L-20078","L-20088","L-20155","L-20178"]},{"id":"AGT-137","leadsTouched":6,"attempts":10,"completed":4,"calls":8,"sms":2,"leadIds":["L-20005","L-20025","L-20035","L-20132","L-20145","L-20185"]},{"id":"AGT-126","leadsTouched":4,"attempts":10,"completed":3,"calls":7,"sms":3,"leadIds":["L-20046","L-20048","L-20105","L-20128"]},{"id":"AGT-138","leadsTouched":4,"attempts":9,"completed":1,"calls":6,"sms":3,"leadIds":["L-20015","L-20020","L-20139","L-20197"]},{"id":"AGT-123","leadsTouched":4,"attempts":9,"completed":2,"calls":5,"sms":4,"leadIds":["L-20057","L-20064","L-20096","L-20165"]},{"id":"AGT-119","leadsTouched":3,"attempts":9,"completed":1,"calls":4,"sms":5,"leadIds":["L-20042","L-20125","L-20160"]},{"id":"AGT-108","leadsTouched":6,"attempts":9,"completed":3,"calls":7,"sms":2,"leadIds":["L-20007","L-20066","L-20074","L-20075","L-20142","L-20174"]},{"id":"AGT-133","leadsTouched":3,"attempts":9,"completed":1,"calls":6,"sms":3,"leadIds":["L-20067","L-20081","L-20091"]},{"id":"AGT-139","leadsTouched":4,"attempts":8,"completed":1,"calls":3,"sms":5,"leadIds":["L-20087","L-20090","L-20169","L-20187"]},{"id":"AGT-124","leadsTouched":4,"attempts":8,"completed":1,"calls":6,"sms":2,"leadIds":["L-20070","L-20098","L-20129","L-20182"]},{"id":"AGT-109","leadsTouched":4,"attempts":8,"completed":0,"calls":5,"sms":3,"leadIds":["L-20006","L-20130","L-20176","L-20192"]},{"id":"AGT-128","leadsTouched":4,"attempts":7,"completed":3,"calls":6,"sms":1,"leadIds":["L-20036","L-20037","L-20193","L-20205"]},{"id":"AGT-101","leadsTouched":4,"attempts":6,"completed":2,"calls":5,"sms":1,"leadIds":["L-20058","L-20061","L-20147","L-20183"]},{"id":"AGT-102","leadsTouched":5,"attempts":6,"completed":3,"calls":5,"sms":1,"leadIds":["L-20001","L-20039","L-20076","L-20136","L-20173"]},{"id":"AGT-127","leadsTouched":3,"attempts":6,"completed":2,"calls":5,"sms":1,"leadIds":["L-20027","L-20124","L-20140"]},{"id":"AGT-130","leadsTouched":4,"attempts":6,"completed":2,"calls":5,"sms":1,"leadIds":["L-20012","L-20028","L-20179","L-20181"]},{"id":"AGT-118","leadsTouched":3,"attempts":5,"completed":2,"calls":4,"sms":1,"leadIds":["L-20002","L-20040","L-20149"]},{"id":"AGT-121","leadsTouched":4,"attempts":5,"completed":3,"calls":3,"sms":2,"leadIds":["L-20033","L-20079","L-20170","L-20195"]},{"id":"AGT-131","leadsTouched":3,"attempts":4,"completed":1,"calls":3,"sms":1,"leadIds":["L-20151","L-20158","L-20184"]},{"id":"AGT-132","leadsTouched":2,"attempts":4,"completed":1,"calls":3,"sms":1,"leadIds":["L-20084","L-20095"]},{"id":"AGT-134","leadsTouched":1,"attempts":3,"completed":0,"calls":2,"sms":1,"leadIds":["L-20103"]},{"id":"AGT-104","leadsTouched":1,"attempts":3,"completed":1,"calls":2,"sms":1,"leadIds":["L-20146"]},{"id":"AGT-111","leadsTouched":2,"attempts":3,"completed":0,"calls":2,"sms":1,"leadIds":["L-20100","L-20152"]},{"id":"AGT-140","leadsTouched":1,"attempts":2,"completed":0,"calls":1,"sms":1,"leadIds":["L-20054"]},{"id":"AGT-122","leadsTouched":1,"attempts":2,"completed":0,"calls":1,"sms":1,"leadIds":["L-20141"]},{"id":"AGT-116","leadsTouched":1,"attempts":1,"completed":1,"calls":1,"sms":0,"leadIds":["L-20191"]}];
+
+const STATUS_MAP = {C:'completed', D:'delivered', N:'no_answer', V:'voicemail', F:'failed_err30006_landline'};
+const STATUS_LABEL = {completed:'Completed', delivered:'Delivered (SMS)', no_answer:'No answer', voicemail:'Voicemail', failed_err30006_landline:'Failed (landline)', untouched:'Never touched'};
+const STATUS_COLOR = {completed:'var(--color-text-success)', delivered:'var(--color-text-info)', no_answer:'var(--color-text-secondary)', voicemail:'var(--color-text-secondary)', failed_err30006_landline:'var(--color-text-warning)', untouched:'var(--color-text-danger)'};
+
+function decodeLeads(tuples){
+  return tuples.map(t=>{
+    const [id,name,source,received,phone,email,sms,call,type,outcome,ttfc,issuesStr,dupStr,dupPriority,eventsStr] = t;
+    const issues = issuesStr ? issuesStr.split(',') : [];
+    const dup = dupStr ? dupStr.split(',').map(x=>'L-'+x) : [];
+    const events = eventsStr ? eventsStr.split(';').map(es=>{
+      const [ch,status,agent,offset] = es.split('|');
+      return { ch: ch==='c'?'call':'sms', status, agent:'AGT-'+agent, offsetMin: parseInt(offset,10) };
+    }) : [];
+    return { id:'L-'+id, name, source, received, phone, email: email||null, smsConsent: sms===1?true:(sms===0?false:null), callConsent: call===1, type: type==='b'?'buyer':'seller', outcome, ttfc, issues, dup, dupPriority: dupPriority||null, events };
+  });
+}
+
+function decodeAttempts(tuples, leadsById){
+  return tuples.map(t=>{
+    const [aid,lid,ch,at,statusCode,agent] = t;
+    const lead = leadsById['L-'+lid];
+    return { attemptId:'A-'+aid, leadId:'L-'+lid, leadName: lead?lead.name:'?', source: lead?lead.source:'?', channel: ch==='c'?'call':'sms', at, status: STATUS_MAP[statusCode]||statusCode, agent:'AGT-'+agent };
+  });
+}
+
+
+const LEADS = decodeLeads(LEADS_TUPLE);
+const LEADS_BY_ID = Object.fromEntries(LEADS.map(l => [l.id, l]));
+const ATTEMPTS = decodeAttempts(ATTEMPTS_TUPLE, LEADS_BY_ID);
+
+
+
+
+
+
+const SOURCES = [
+  { name:"AgentMatch Pro", total:29, touched:29, touchRate:100.0, completed:9, completedRate:31.0, slow:0, dup:1 },
+  { name:"HomeFlow", total:27, touched:27, touchRate:100.0, completed:10, completedRate:37.0, slow:0, dup:3 },
+  { name:"LeadBridge", total:45, touched:45, touchRate:100.0, completed:29, completedRate:64.4, slow:20, dup:2 },
+  { name:"ListingLoop", total:26, touched:26, touchRate:100.0, completed:14, completedRate:53.8, slow:0, dup:4 },
+  { name:"OfferNest", total:52, touched:34, touchRate:65.4, completed:17, completedRate:32.7, slow:0, dup:1 },
+  { name:"SellFast Direct", total:27, touched:27, touchRate:100.0, completed:10, completedRate:37.0, slow:0, dup:3 }
+];
+
+const ISSUE_META = {
+  untouched: { label: "Never contacted", severity: 3, count: SUMMARY.untouched, automatable: false, owner: "Data / ingestion", monetized: true,
+    why: "All 18 sit inside a tight May 11\u201316 window and are exclusive to OfferNest. Some OfferNest leads from the same days WERE worked, so this isn't a full outage \u2014 it looks like a flaky routing or matching rule that silently drops a subset of OfferNest leads before they ever reach an agent's queue.",
+    fix: "Add a same-day reconciliation check: count leads OfferNest says it sent vs. leads that landed in the queue. Any gap alerts immediately instead of surfacing weeks later. Medium effort, highest leverage \u2014 this is the single biggest reachable-revenue gap in the data.",
+    fixNote: "Requires investigating OfferNest's ingestion path with the data/ingestion team before a fix can be built \u2014 not something this tool can patch on its own.",
+    notifyChannel: "slack", notifyTeam: "#data-ingestion" },
+  sms_dead_end: { label: "SMS dead end, no call fallback", severity: 3, count: SUMMARY.sms_dead_end, automatable: true, owner: "Engineering", monetized: true,
+    why: "The dialer detects the landline failure (err30006) but is only configured to retry the same SMS 2\u20133 times \u2014 it has no fallback rule to escalate to a call, even though every one of these 12 leads has consent_call=TRUE on file.",
+    fix: "Add a fallback rule: after one SMS landline failure, auto-trigger a call attempt instead of repeating the SMS. Low effort, addresses 12 fully-stalled leads immediately, and a phone-type lookup before the first SMS would prevent the failure entirely.",
+    fixNote: "Pure logic change in the outreach engine \u2014 no partner or data dependency. A good candidate to ship first.",
+    notifyChannel: "slack", notifyTeam: "#eng-outreach-platform" },
+  consent_violation: { label: "SMS sent without consent", severity: 3, count: SUMMARY.consent_violation, automatable: true, owner: "Engineering",
+    why: "10 leads received SMS despite consent_sms being explicitly FALSE (4) or blank (6). The blank cases suggest the system is treating a missing field as implicit permission \u2014 that's the riskier bug, since it could be silently affecting any source.",
+    fix: "Hard-block SMS sends when consent_sms is not explicitly TRUE (treat blank the same as FALSE). This is a same-day code change and also closes a compliance exposure, not just a pipeline one.",
+    fixNote: "A single conditional check in the send path. Should also get a compliance sign-off given the legal exposure, but the code itself is trivial.",
+    notifyChannel: "email", notifyTeam: "compliance@clever.com" },
+  intake_form_gap: { label: "Partner intake form missing consent disclosure", severity: 3, count: SUMMARY.intake_form_gap, automatable: false, owner: "Compliance / legal", isNew: true,
+    why: "A live OfferNest capture form (screenshot reviewed directly) collects property address, phone, and email with a single \u201cGet An Offer\u201d button \u2014 there is no visible consent checkbox, no \u201cby submitting you agree to be contacted by call/text, possibly using automated technology\u201d disclosure, and no link to a privacy policy or terms of service. This is upstream of, and likely explains, the blank/implicit consent_sms records traced back to this source.",
+    fix: "Flag to compliance/legal and to OfferNest directly: any partner-facing capture form needs a clear, conspicuous consent disclosure and an affirmative opt-in mechanism before a phone number reaches our dialer, regardless of which exact consent standard applies in the lead's state. This is a partner contract and form-design issue, not something our own dialer logic can fix after the fact.",
+    fixNote: "Current consent rules are genuinely in flux right now \u2014 the FCC's standard generally still calls for clear, conspicuous written consent gathered one seller at a time, but a Fifth Circuit ruling in Feb 2026 (Bradford v. Sovereign Pest Control) held the statute itself only requires oral-or-written express consent, and that holding currently only binds Texas/Louisiana/Mississippi. Regardless of which standard ultimately applies, this form clears neither bar \u2014 there's no disclosure of any kind.",
+    notifyChannel: "email", notifyTeam: "legal@clever.com" },
+  bot_protection_gap: { label: "Partner intake form has no visible bot protection or input sanitization", severity: 2, count: SUMMARY.bot_protection_gap, automatable: false, owner: "Security / engineering", isNew: true,
+    why: "The same OfferNest form has no visible CAPTCHA, honeypot field, or rate limiting, and no indication of server-side input sanitization on the free-text fields. Industry data puts bot/junk submissions at roughly 42% of B2B form traffic when no protection is in place, and free-text fields without sanitization are a standing risk for injection-style abuse, not just spam volume.",
+    fix: "Add a honeypot field (cheap, invisible to real users) plus basic rate limiting per IP/session as a first layer; add server-side sanitization and validation on every field regardless of what the frontend already checks, since client-side checks can be bypassed by direct requests. A visible CAPTCHA is a heavier-handed fallback if the lighter layers aren't enough.",
+    fixNote: "This is a separate problem from the missing consent disclosure above \u2014 different owner (security/engineering, not legal), different fix, even though both came from reviewing the same screenshot.",
+    notifyChannel: "slack", notifyTeam: "#security-eng" },
+  slow_response: { label: "Bimodal response time (LeadBridge)", severity: 2, count: SUMMARY.slow_response, automatable: false, owner: "Partner success",
+    why: "20 of 45 LeadBridge leads wait 170\u2013361 minutes for first contact while the other 25 connect in under 12 \u2014 a clean bimodal split with no time-of-day pattern and zero leads in between. That signature points to two separate ingestion paths (e.g. real-time API vs. a batched SFTP pickup) rather than random delay. For context, industry research generally treats 5 minutes as the response-time benchmark, and the typical real estate agent averages far longer than that across the board \u2014 so \u201cslow\u201d here means slow relative to this source's own fast group, not necessarily slow against the wider industry.",
+    fix: "Confirm with LeadBridge whether they send via two channels; if so, route the batch path through the same instant-alert queue as the API path, or shrink the batch interval. Worth a direct conversation with the partner before building anything.",
+    fixNote: "Needs a conversation with LeadBridge to confirm their ingestion architecture before any internal fix makes sense.",
+    notifyChannel: "email", notifyTeam: "partner-success@clever.com" },
+  duplicate: { label: "Duplicate across partners", severity: 2, count: SUMMARY.duplicates, automatable: true, owner: "Engineering",
+    why: "7 phone numbers appear as separate lead_ids from two different partners within days of each other (14 leads total) \u2014 almost certainly the same homeowner shopping multiple lead-gen sites. In 5 of those 7 pairs, only the first-received lead was ever marked completed; the second never was. In the other 2 pairs, both leads independently got completed by two different agents \u2014 not a missed lead, but duplicated effort.",
+    fix: "Add a cross-partner phone-match check at intake: if a normalized phone number already exists as an open lead, route the new submission to the same agent already working the first one rather than creating a second independent thread. The data supports a first-received-gets-priority rule \u2014 zero pairs show the second lead succeeding where the first failed.",
+    fixNote: "A dedup check at the intake layer. Self-contained engineering work, no partner dependency, though phone normalization should land first.",
+    notifyChannel: "slack", notifyTeam: "#eng-outreach-platform" },
+  conflicting_type: { label: "Conflicting buyer/seller tag", severity: 1, count: SUMMARY.conflicting_type, automatable: true, owner: "Engineering",
+    why: "In some duplicate pairs, the same phone number is tagged buyer on one source and seller on the other. lead_type is just whatever form the person filled out \u2014 it isn't a stable fact about the person, so two simultaneous truths can both be \"correct.\"",
+    fix: "Once cross-partner dedup exists (see above), store lead_type as a list per person rather than a single value, so agents see both intents instead of one overwriting the other.",
+    fixNote: "Depends on the dedup fix landing first; after that it's a schema and display change, no partner involvement.",
+    notifyChannel: "slack", notifyTeam: "#eng-outreach-platform" },
+  missing_consent_field: { label: "Missing consent field", severity: 2, count: SUMMARY.missing_consent_field, automatable: false, owner: "Partner success",
+    why: "17 of 206 leads (8.3%) have a blank, not False, consent_sms value, spread across all six partners. That points to an optional field on the intake form rather than a partner-specific issue \u2014 it's a forms problem showing up everywhere at once.",
+    fix: "Make consent_sms a required field on every partner's submission form, with no default value, so a partner integration breaks loudly instead of silently passing through blank.",
+    fixNote: "Requires updating partner-facing intake form contracts \u2014 a partner success / partner engineering conversation, not a same-day internal patch.",
+    notifyChannel: "email", notifyTeam: "partner-success@clever.com" },
+  missing_email: { label: "Missing email", severity: 1, count: SUMMARY.missing_email, automatable: false, owner: "Partner success",
+    why: "15 of 206 leads (7.3%) have no email at all, thinly spread across nearly every source rather than concentrated in one \u2014 again looks like an optional field on the intake form, not a partner-specific data feed problem.",
+    fix: "Make email required at intake, or if some partners can't guarantee it, add a fallback contact step (e.g. confirm by SMS) so a missing email doesn't quietly remove a contact channel.",
+    fixNote: "Same category as the consent field gap \u2014 a partner form change, not something the engine alone can fix.",
+    notifyChannel: "email", notifyTeam: "partner-success@clever.com" },
+  redundant_contact: { label: "Contacted after completion", severity: 1, count: SUMMARY.redundant_contact, automatable: true, owner: "Engineering",
+    why: "5 attempts fired after a lead was already marked complete \u2014 a minor 1.3% of all attempts, most likely a status-check race condition rather than a systemic routing issue.",
+    fix: "Add a status check immediately before any outreach attempt fires, not just at queue-assignment time, so a lead that's been completed in the interim doesn't get contacted again. Low priority relative to the other nine.",
+    fixNote: "A guard clause in the outreach scheduler. Small, self-contained, low priority.",
+    notifyChannel: "slack", notifyTeam: "#eng-outreach-platform" }
+};
+
+const SEVERITY_LABEL = { 3: "High risk", 2: "Medium risk", 1: "Low risk" };
+const OUTCOME_LABEL = { completed:"Completed", no_answer:"No answer", voicemail:"Voicemail", delivered:"Delivered (SMS)", failed_err30006_landline:"Failed (landline)", untouched:"Never touched" };
+const OUTCOME_COLOR = { completed:"var(--color-text-success)", no_answer:"var(--color-text-secondary)", voicemail:"var(--color-text-secondary)", delivered:"var(--color-text-info)", failed_err30006_landline:"var(--color-text-warning)", untouched:"var(--color-text-danger)" };
+const ISSUE_LABELS = Object.fromEntries(Object.entries(ISSUE_META).map(([k,v]) => [k, v.label]));
+
+function sevClass(sev) { return sev===3?'ljt-badge-sev3':sev===2?'ljt-badge-sev2':'ljt-badge-sev1'; }
+function sevDotVar(sev) { return sev===3?'var(--color-text-danger)':sev===2?'var(--color-text-warning)':'var(--color-text-info)'; }
+function fmtDate(iso){ const d=new Date(iso); return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+function fmtUSD(n){ return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n); }
+function fmtMin(m){ if(m==null) return '\u2014'; if(m<60) return m+' min'; const h=Math.floor(m/60), r=m%60; return h+'h'+(r?' '+r+'m':''); }
+
+function switchTab(name){
+  document.querySelectorAll('.ljt-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.ljt-panel').forEach(p=>p.classList.remove('active'));
+  const p=document.getElementById('panel-'+name);
+  if(p) p.classList.add('active');
+}
+document.querySelectorAll('.ljt-tab').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
+
+function pagerHTML(idPrefix, page, totalPages, totalCount, pageSize){
+  const start = page*pageSize+1;
+  const end = Math.min((page+1)*pageSize, totalCount);
+  return `<div class="ljt-pager">
+    <span>Showing ${start}\u2013${end} of ${totalCount}</span>
+    <div class="ljt-pager-btns">
+      <button class="ljt-pager-btn" ${page<=0?'disabled':''} onclick="${idPrefix}GoToPage(0)">First</button>
+      <button class="ljt-pager-btn" ${page<=0?'disabled':''} onclick="${idPrefix}GoToPage(${page-1})">Prev</button>
+      <span style="padding:4px 8px;">Page ${page+1} of ${totalPages}</span>
+      <button class="ljt-pager-btn" ${page>=totalPages-1?'disabled':''} onclick="${idPrefix}GoToPage(${page+1})">Next</button>
+      <button class="ljt-pager-btn" ${page>=totalPages-1?'disabled':''} onclick="${idPrefix}GoToPage(${totalPages-1})">Last</button>
+    </div>
+  </div>`;
+}
+
+let homePrice = 350000, listingFeePct = 1.5, referralPct = 25, leadToClosePct = 5;
+function calcRevenuePerLead(){
+  const listingFee = Math.max(homePrice * (listingFeePct/100), 3000);
+  return listingFee * (referralPct/100) * (leadToClosePct/100);
+}
+
+function renderAlerts(){
+  const order=['untouched','sms_dead_end','consent_violation','intake_form_gap','bot_protection_gap','slow_response','duplicate','conflicting_type','missing_consent_field','missing_email','redundant_contact'];
+  const total=order.reduce((a,k)=>a+ISSUE_META[k].count,0);
+  const revPerLead = calcRevenuePerLead();
+  const untouchedImpact = revPerLead * SUMMARY.untouched;
+  const smsDeadEndImpact = revPerLead * SUMMARY.sms_dead_end;
+
+  let html=`<div class="ljt-metric-grid">
+    <div class="ljt-metric"><p class="ljt-metric-label">Total leads</p><p class="ljt-metric-value">${SUMMARY.total_leads}</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Touch rate</p><p class="ljt-metric-value">${SUMMARY.touch_rate}%</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Completed rate</p><p class="ljt-metric-value">${SUMMARY.completed_rate}%</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Open alerts</p><p class="ljt-metric-value">${total}</p></div>
+  </div>
+  <div class="ljt-card" style="border-color:#0EC18F;">
+    <div class="ljt-row-flex">
+      <p class="ljt-heading" style="margin:0;">Estimated revenue impact \u2014 adjust live</p>
+      <span class="ljt-badge ljt-badge-money">Only 2 of 11 issues monetized</span>
+    </div>
+    <p class="ljt-assumption" style="margin:6px 0 12px;">Placeholder assumptions, not Clever's real numbers \u2014 see the Assumptions tab. Drag to recalculate instantly.</p>
+    <div class="ljt-calc-row"><span class="ljt-calc-label">Typical home price</span><input type="range" min="150000" max="800000" step="10000" value="${homePrice}" oninput="homePrice=parseInt(this.value);document.getElementById('hp-out').textContent=fmtUSD(homePrice);renderAlerts();" style="flex:1;min-width:120px;"><span id="hp-out" style="font-weight:500;min-width:90px;">${fmtUSD(homePrice)}</span></div>
+    <div class="ljt-calc-row"><span class="ljt-calc-label">Listing fee rate</span><input type="range" min="1" max="3" step="0.1" value="${listingFeePct}" oninput="listingFeePct=parseFloat(this.value);document.getElementById('lf-out').textContent=listingFeePct.toFixed(1)+'%';renderAlerts();" style="flex:1;min-width:120px;"><span id="lf-out" style="font-weight:500;min-width:90px;">${listingFeePct.toFixed(1)}%</span></div>
+    <div class="ljt-calc-row"><span class="ljt-calc-label">Clever's referral cut</span><input type="range" min="10" max="50" step="1" value="${referralPct}" oninput="referralPct=parseInt(this.value);document.getElementById('rp-out').textContent=referralPct+'%';renderAlerts();" style="flex:1;min-width:120px;"><span id="rp-out" style="font-weight:500;min-width:90px;">${referralPct}%</span></div>
+    <div class="ljt-calc-row"><span class="ljt-calc-label">Lead-to-close rate</span><input type="range" min="1" max="15" step="0.5" value="${leadToClosePct}" oninput="leadToClosePct=parseFloat(this.value);document.getElementById('lc-out').textContent=leadToClosePct.toFixed(1)+'%';renderAlerts();" style="flex:1;min-width:120px;"><span id="lc-out" style="font-weight:500;min-width:90px;">${leadToClosePct.toFixed(1)}%</span></div>
+    <div class="ljt-metric-grid" style="margin-top:10px;margin-bottom:0;">
+      <div class="ljt-metric"><p class="ljt-metric-label">Revenue per lead</p><p class="ljt-metric-value sm">${fmtUSD(revPerLead)}</p></div>
+      <div class="ljt-metric"><p class="ljt-metric-label">Never contacted (18)</p><p class="ljt-metric-value sm">${fmtUSD(untouchedImpact)}</p></div>
+      <div class="ljt-metric"><p class="ljt-metric-label">SMS dead end (12)</p><p class="ljt-metric-value sm">${fmtUSD(smsDeadEndImpact)}</p></div>
+      <div class="ljt-metric"><p class="ljt-metric-label">Combined</p><p class="ljt-metric-value sm">${fmtUSD(untouchedImpact+smsDeadEndImpact)}</p></div>
+    </div>
+    <p class="ljt-note">Only these two categories are monetized because they're the cleanest "this lead never had a chance" cases. Slow response, duplicates, and consent issues likely cost something too, but quantifying them would mean guessing at lost connect-rate or trust \u2014 better validated with the team than guessed here.</p>
+  </div>
+  <div class="ljt-card"><p class="ljt-heading" style="margin:0 0 8px;">Active alerts \u2014 click any to see why, the fix, owner, and risk tier</p>`;
+  order.forEach(key=>{
+    const meta=ISSUE_META[key];
+    if(!meta.count) return;
+    html+=`<div class="ljt-alert" onclick="toggleWhyFix('${key}')">
+      <span class="ljt-dot" style="background:${sevDotVar(meta.severity)};"></span>
+      <div style="flex:1;">
+        <div class="ljt-row-flex">
+          <span style="font-weight:500;cursor:pointer;" onclick="event.stopPropagation();filterToIssue('${key}')">${meta.label}</span>
+          <span style="display:flex;align-items:center;gap:6px;">
+            ${meta.isNew?'<span class="ljt-badge ljt-badge-new">New \u2014 from screenshot review</span>':''}
+            ${meta.monetized?'<span class="ljt-badge ljt-badge-money">$ estimated</span>':''}
+            <span style="color:var(--color-text-tertiary);font-size:13px;">${meta.count} lead${meta.count===1?'':'s'}</span>
+          </span>
+        </div>
+        <div class="ljt-meta-row">
+          <span class="ljt-badge ${sevClass(meta.severity)}">${SEVERITY_LABEL[meta.severity]}</span>
+          <span class="ljt-badge ${meta.automatable?'ljt-badge-auto':'ljt-badge-ext'}">${meta.automatable?'Internally automatable':'Needs external input'}</span>
+          <span class="ljt-badge ljt-badge-ext">Suggested owner: ${meta.owner}</span>
+        </div>
+        <div id="whyfix-${key}" style="display:none;" class="ljt-why-fix">
+          <div class="ljt-why"><span style="font-weight:500;">Why:</span> ${meta.why}</div>
+          <div class="ljt-fix"><span style="font-weight:500;">Fix:</span> ${meta.fix}</div>
+          <p style="font-size:12px;color:var(--color-text-tertiary);margin:0;">${meta.fixNote}</p>
+          <div style="display:flex;gap:8px;">
+            <button class="ljt-cta-secondary" onclick="event.stopPropagation();showNotifyDraft('${key}')">Notify owner</button>
+            <button class="ljt-cta-secondary" onclick="event.stopPropagation();filterToIssue('${key}')">See affected leads</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+  html+=`</div><p class="ljt-note">Counts reflect the full 206-lead dataset, recomputed directly from the source files, plus two direct observations from a live OfferNest capture form screenshot. Owners are suggested functional placeholders, not confirmed assignments.</p>`;
+  document.getElementById('panel-alerts').innerHTML=html;
+}
+
+function toggleWhyFix(key){
+  const el = document.getElementById('whyfix-'+key);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  document.querySelectorAll('[id^="whyfix-"]').forEach(e => e.style.display = 'none');
+  el.style.display = isOpen ? 'none' : 'grid';
+}
+
+function filterToIssue(key){
+  resultsFilter = 'issue:' + key;
+  resultsPage = 0;
+  switchTab('results-macro');
+  renderResults();
+}
+
+function showNotifyDraft(key){
+  const meta = ISSUE_META[key];
+  switchTab('notify');
+  let draft = '';
+  if(meta.notifyChannel === 'slack'){
+    draft = `To: ${meta.notifyTeam}\n\nHeads up \u2014 Surprisingly Clever flagged "${meta.label}" (${meta.count} affected lead${meta.count===1?'':'s'}, ${SEVERITY_LABEL[meta.severity].toLowerCase()}).\n\n${meta.why}\n\nSuggested fix: ${meta.fix}\n\nFull detail + affected lead list: [link to dashboard]\ncc @leadops`;
+  } else {
+    draft = `To: ${meta.notifyTeam}\nSubject: [Lead pipeline] ${meta.label} \u2014 ${meta.count} affected lead${meta.count===1?'':'s'}\n\nHi team,\n\nFlagging a finding from the lead pipeline diagnostic: ${meta.label}.\n\n${meta.why}\n\nSuggested fix: ${meta.fix}\n\nHappy to walk through the affected leads on a call. Full detail attached / linked here: [link to dashboard]\n\nBest,\n[Your name]`;
+  }
+  document.getElementById('panel-notify').innerHTML = `<span class="ljt-back" onclick="switchTab('alerts')">&larr; Back to alerts</span>
+  <div class="ljt-card">
+    <p class="ljt-heading" style="margin:0 0 4px;">${meta.notifyChannel === 'slack' ? 'Slack message' : 'Email'} draft \u2014 ${meta.notifyTeam}</p>
+    <p class="ljt-assumption" style="margin:0 0 8px;">Not wired up to actually send. Copy this into ${meta.notifyChannel === 'slack' ? 'Slack' : 'your email client'} once the finding is validated with the team.</p>
+    <div class="ljt-draft-box">${draft}</div>
+    <button class="ljt-cta" style="margin-top:10px;" onclick="navigator.clipboard && navigator.clipboard.writeText(document.querySelector('.ljt-draft-box').textContent)">Copy draft</button>
+  </div>`;
+}
+
+function renderAssumptions(){
+  let html = `<div class="ljt-card">
+    <p class="ljt-heading" style="margin:0 0 4px;">What's solid vs. what's a placeholder</p>
+    <p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 12px;">Everything in the Alerts tab besides the dollar figures is computed directly from all 206 leads and all 379 outreach attempts \u2014 every record is browsable in the All Leads and Outreach Log tabs, not just a curated sample.</p>
+    <table class="ljt-assum-table">
+      <tr><td>Data-driven (not assumed)</td><td>Touch rate, completed rate, all 11 issue counts, the OfferNest May 11\u201316 window, the LeadBridge bimodal split (25 leads at 2\u201312 min, 20 leads at 170\u2013361 min, nothing in between), the SMS landline failure pattern, the 7 duplicate phone groups (14 leads) and which lead in each pair was ultimately completed, and the OfferNest capture form screenshot findings.</td></tr>
+      <tr><td>Industry response-time benchmark</td><td>External research generally cites 5 minutes as the response-time target top performers hit, against an industry-average response time measured in hours; shown for context on the "bimodal response time" finding, not as a claim about what Clever's own target should be.</td></tr>
+      <tr><td>Typical home price ($350,000 default)</td><td>Anchored to the example price point Clever itself uses in public marketing, not pulled from this dataset (the dataset has no sale price field).</td></tr>
+      <tr><td>Listing fee rate (1.5% default, $3,000 min)</td><td>Clever's actual published pricing model, not an assumption.</td></tr>
+      <tr><td>Clever's referral cut (25% default)</td><td>An assumed share of the agent's commission kept as a referral fee. Industry referral fees commonly range roughly 10\u201350%; 25% is a midpoint placeholder.</td></tr>
+      <tr><td>Lead-to-close rate (5% default)</td><td>An assumed share of all leads that eventually close. The single biggest unknown here \u2014 not in the dataset, varies a lot by source quality.</td></tr>
+    </table>
+    <p class="ljt-note">Maps to the open question already flagged for the team: "What's the average revenue or margin per connected lead, by lead type?" Once real numbers come back, swap them into the sliders on the Alerts tab and every downstream number updates instantly.</p>
+  </div>`;
+  document.getElementById('panel-assumptions').innerHTML = html;
+}
+
+let resultsFilter = 'all';
+let resultsPage = 0;
+let resultsSearch = '';
+const RESULTS_PAGE_SIZE = 15;
+
+function setResultsFilter(f){ resultsFilter = f; resultsPage = 0; renderResults(); }
+function resultsGoToPage(p){ resultsPage = p; renderResults(); }
+function setResultsSearch(v){ resultsSearch = v.trim().toLowerCase(); resultsPage = 0; renderResults(); }
+
+function getFilteredLeads(){
+  let list = LEADS;
+  if(resultsFilter === 'completed') list = list.filter(l => l.outcome === 'completed');
+  else if(resultsFilter === 'issues') list = list.filter(l => l.issues.length > 0);
+  else if(resultsFilter === 'clean') list = list.filter(l => l.issues.length === 0);
+  else if(resultsFilter.startsWith('issue:')) { const k = resultsFilter.slice(6); list = list.filter(l => l.issues.includes(k)); }
+  if(resultsSearch){
+    list = list.filter(l => l.id.toLowerCase().includes(resultsSearch) || l.name.toLowerCase().includes(resultsSearch) || l.source.toLowerCase().includes(resultsSearch));
+  }
+  return list;
+}
+
+function renderResults(){
+  const filtered = getFilteredLeads();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / RESULTS_PAGE_SIZE));
+  if(resultsPage >= totalPages) resultsPage = totalPages - 1;
+  const pageItems = filtered.slice(resultsPage*RESULTS_PAGE_SIZE, (resultsPage+1)*RESULTS_PAGE_SIZE);
+
+  const completedCount = LEADS.filter(l=>l.outcome==='completed').length;
+  const issueCount = LEADS.filter(l=>l.issues.length>0).length;
+  const cleanCount = LEADS.filter(l=>l.issues.length===0).length;
+  const filterLabel = resultsFilter.startsWith('issue:') ? ISSUE_LABELS[resultsFilter.slice(6)] : null;
+
+  let html = `<p style="color:var(--color-text-secondary);font-size:13px;margin:0 0 10px;">All ${LEADS.length} leads from leads.csv, fully computed \u2014 not a sample. Click a row for full detail and timeline.</p>
+  <input class="ljt-search" placeholder="Search by lead ID, name, or source" value="${resultsSearch}" oninput="setResultsSearch(this.value)">
+  <div class="ljt-filter-pills">
+    <span class="ljt-pill ${resultsFilter==='all'?'active':''}" onclick="setResultsFilter('all')">All (${LEADS.length})</span>
+    <span class="ljt-pill ${resultsFilter==='completed'?'active':''}" onclick="setResultsFilter('completed')">Completed (${completedCount})</span>
+    <span class="ljt-pill ${resultsFilter==='issues'?'active':''}" onclick="setResultsFilter('issues')">Has issue (${issueCount})</span>
+    <span class="ljt-pill ${resultsFilter==='clean'?'active':''}" onclick="setResultsFilter('clean')">No issue flagged (${cleanCount})</span>
+    ${filterLabel ? `<span class="ljt-pill active">${filterLabel} (${filtered.length})</span>` : ''}
+  </div>
+  <table class="ljt-table"><thead><tr><th>Lead</th><th>Source</th><th>Time to first contact</th><th>Outcome</th><th>Issues</th></tr></thead><tbody>`;
+  if(pageItems.length === 0){
+    html += `<tr><td colspan="5" style="text-align:center;color:var(--color-text-tertiary);padding:20px;">No leads match this filter.</td></tr>`;
+  }
+  pageItems.forEach(l=>{
+    html+=`<tr class="clickable" onclick="showLead('${l.id}')">
+      <td style="font-weight:500;">${l.name} <span style="color:var(--color-text-tertiary);font-weight:400;">(${l.id})</span></td>
+      <td>${l.source}</td>
+      <td>${fmtMin(l.ttfc)}</td>
+      <td><span style="color:${OUTCOME_COLOR[l.outcome]};">${OUTCOME_LABEL[l.outcome]}</span></td>
+      <td>${l.issues.length ? l.issues.map(i=>`<span class="ljt-badge ${sevClass(ISSUE_META[i].severity)}" style="margin-right:4px;">${ISSUE_META[i].label}</span>`).join('') : '<span style="color:var(--color-text-tertiary);">none</span>'}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table>`;
+  html += pagerHTML('results', resultsPage, totalPages, filtered.length, RESULTS_PAGE_SIZE);
+  document.getElementById('panel-results-macro').innerHTML=html;
+}
+function resultsGoToPage(p){ resultsPage = p; renderResults(); }
+
+function showLead(id){
+  const l=LEADS.find(x=>x.id===id);
+  if(!l) return;
+  switchTab('lead-detail');
+  let html=`<span class="ljt-back" onclick="switchTab('results-macro')">&larr; Back to all leads</span>
+  <div class="ljt-card">
+    <p style="font-weight:500;font-size:16px;margin:0;">${l.name}</p>
+    <p style="color:var(--color-text-secondary);font-size:13px;margin:2px 0 0;">${l.id} &middot; ${l.source} &middot; ${l.type}</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-top:12px;">
+      <div><span style="color:var(--color-text-secondary);">Phone</span><br>${l.phone}</div>
+      <div><span style="color:var(--color-text-secondary);">Email</span><br>${l.email||'<span style="color:var(--color-text-danger);">missing</span>'}</div>
+      <div><span style="color:var(--color-text-secondary);">SMS consent</span><br>${l.smsConsent===null?'<span style="color:var(--color-text-danger);">blank</span>':l.smsConsent?'yes':'no'}</div>
+      <div><span style="color:var(--color-text-secondary);">Call consent</span><br>${l.callConsent?'yes':'no'}</div>
+    </div>
+  </div>`;
+  if(l.issues.length){
+    html+=`<div class="ljt-card"><p style="font-weight:500;margin:0 0 8px;">Flagged issues</p>`;
+    l.issues.forEach(i=>{
+      const meta = ISSUE_META[i];
+      html+=`<div style="margin-bottom:10px;">
+        <span class="ljt-badge ${sevClass(meta.severity)}">${meta.label}</span>
+        <div class="ljt-meta-row">
+          <span class="ljt-badge ${meta.automatable?'ljt-badge-auto':'ljt-badge-ext'}">${meta.automatable?'Internally automatable':'Needs external input'}</span>
+          <span class="ljt-badge ljt-badge-ext">Suggested owner: ${meta.owner}</span>
+        </div>
+        <div class="ljt-why-fix" style="margin-top:6px;">
+          <div class="ljt-why"><span style="font-weight:500;">Why:</span> ${meta.why}</div>
+          <div class="ljt-fix"><span style="font-weight:500;">Fix:</span> ${meta.fix}</div>
+        </div>
+      </div>`;
+    });
+    if(l.dup.length) html+=`<p style="font-size:13px;margin-top:8px;">Duplicate of: ${l.dup.map(id=>`<a href="#" onclick="showLead('${id}');return false;" style="color:var(--color-text-info);">${id}</a>`).join(', ')}${l.dupPriority?` \u2014 this lead is the "${l.dupPriority}-received" record`:''}</p>`;
+    html+=`</div>`;
+  }
+  html+=`<div class="ljt-card"><p style="font-weight:500;margin:0 0 8px;">Timeline</p>
+    <div class="ljt-event"><div><span style="font-size:13px;font-weight:500;">Lead received</span><br><span style="font-size:12px;color:var(--color-text-secondary);">${fmtDate(l.received)} via ${l.source}</span></div></div>`;
+  let prevTime = new Date(l.received);
+  l.events.forEach(e=>{
+    const t = new Date(e.at);
+    const hopMin = Math.round((t - prevTime)/60000);
+    html+=`<div class="ljt-hop">+ ${fmtMin(hopMin)} since previous step</div>`;
+    html+=`<div class="ljt-event"><div><span style="font-size:13px;font-weight:500;">${e.ch.toUpperCase()} &middot; ${e.status}</span><br><span style="font-size:12px;color:var(--color-text-secondary);">${fmtDate(e.at)} &middot; ${e.agent}</span></div></div>`;
+    prevTime = t;
+  });
+  if(!l.events.length) html+=`<div class="ljt-event"><div><span style="font-size:13px;color:var(--color-text-danger);font-weight:500;">No outreach attempts ever recorded</span></div></div>`;
+  html+=`</div>`;
+  document.getElementById('panel-lead-detail').innerHTML=html;
+}
+
+let outreachPage = 0;
+let outreachSearch = '';
+const OUTREACH_PAGE_SIZE = 20;
+function outreachGoToPage(p){ outreachPage = p; renderOutreach(); }
+function setOutreachSearch(v){ outreachSearch = v.trim().toLowerCase(); outreachPage = 0; renderOutreach(); }
+
+function renderOutreach(){
+  let list = ATTEMPTS;
+  if(outreachSearch){
+    list = list.filter(a => a.leadId.toLowerCase().includes(outreachSearch) || a.leadName.toLowerCase().includes(outreachSearch) || a.agent.toLowerCase().includes(outreachSearch) || a.source.toLowerCase().includes(outreachSearch));
+  }
+  const totalPages = Math.max(1, Math.ceil(list.length / OUTREACH_PAGE_SIZE));
+  if(outreachPage >= totalPages) outreachPage = totalPages - 1;
+  const pageItems = list.slice(outreachPage*OUTREACH_PAGE_SIZE, (outreachPage+1)*OUTREACH_PAGE_SIZE);
+
+  let html = `<p style="color:var(--color-text-secondary);font-size:13px;margin:0 0 10px;">All ${ATTEMPTS.length} outreach attempts from outreach_log.csv, sorted chronologically \u2014 not a sample.</p>
+  <input class="ljt-search" placeholder="Search by lead ID, name, agent, or source" value="${outreachSearch}" oninput="setOutreachSearch(this.value)">
+  <table class="ljt-table"><thead><tr><th>Attempt</th><th>Lead</th><th>Source</th><th>Channel</th><th>Status</th><th>Agent</th><th>Time</th></tr></thead><tbody>`;
+  if(pageItems.length === 0){
+    html += `<tr><td colspan="7" style="text-align:center;color:var(--color-text-tertiary);padding:20px;">No attempts match this search.</td></tr>`;
+  }
+  pageItems.forEach(a=>{
+    html += `<tr class="clickable" onclick="showLead('${a.leadId}')">
+      <td>${a.attemptId}</td>
+      <td>${a.leadName} <span style="color:var(--color-text-tertiary);">(${a.leadId})</span></td>
+      <td>${a.source}</td>
+      <td>${a.channel.toUpperCase()}</td>
+      <td><span style="color:${OUTCOME_COLOR[a.status] || 'var(--color-text-secondary)'};">${a.status}</span></td>
+      <td>${a.agent}</td>
+      <td>${fmtDate(a.at)}</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  html += pagerHTML('outreach', outreachPage, totalPages, list.length, OUTREACH_PAGE_SIZE);
+  document.getElementById('panel-outreach-macro').innerHTML = html;
+}
+
+function renderSources(){
+  let html=`<table class="ljt-table"><thead><tr><th>Source</th><th>Leads</th><th>Touch rate</th><th>Completed rate</th><th>Bimodal response</th><th>Cross-partner dup leads</th></tr></thead><tbody>`;
+  SOURCES.forEach(s=>{
+    const tc=s.touchRate<100?'var(--color-text-danger)':'var(--color-text-success)';
+    html+=`<tr class="clickable" onclick="showSource('${s.name}')">
+      <td style="font-weight:500;">${s.name}</td>
+      <td>${s.total}</td>
+      <td><span style="color:${tc};">${s.touchRate}%</span></td>
+      <td>${s.completedRate}%</td>
+      <td>${s.slow>0?`<span style="color:var(--color-text-warning);">${s.slow}</span>`:'\u2014'}</td>
+      <td>${s.dup}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table><p class="ljt-note">"Cross-partner dup leads" counts this source's leads that share a phone number with a lead from a different partner (7 phone groups, 14 leads total across all sources). Click a source to see every one of its leads.</p>`;
+  document.getElementById('panel-sources-macro').innerHTML=html;
+}
+
+let sourcePage = 0;
+const SOURCE_PAGE_SIZE = 12;
+function sourceGoToPage(p){ sourcePage = p; renderSourceLeadsTable(); }
+let currentSourceName = null;
+
+function renderSourceLeadsTable(){
+  const leads = LEADS.filter(l=>l.source===currentSourceName);
+  const totalPages = Math.max(1, Math.ceil(leads.length / SOURCE_PAGE_SIZE));
+  if(sourcePage >= totalPages) sourcePage = totalPages - 1;
+  const pageItems = leads.slice(sourcePage*SOURCE_PAGE_SIZE, (sourcePage+1)*SOURCE_PAGE_SIZE);
+  let html = `<table class="ljt-table"><tbody>`;
+  pageItems.forEach(l=>{
+    html+=`<tr class="clickable" onclick="showLead('${l.id}')"><td>${l.name} <span style="color:var(--color-text-tertiary);">(${l.id})</span></td><td>${fmtDate(l.received)}</td><td><span style="color:${OUTCOME_COLOR[l.outcome]};">${OUTCOME_LABEL[l.outcome]}</span></td></tr>`;
+  });
+  html+=`</tbody></table>`;
+  html += pagerHTML('source', sourcePage, totalPages, leads.length, SOURCE_PAGE_SIZE);
+  document.getElementById('panel-source-leads-table').innerHTML = html;
+}
+
+function showSource(name){
+  const s=SOURCES.find(x=>x.name===name);
+  currentSourceName = name;
+  sourcePage = 0;
+  switchTab('source-detail');
+  let html=`<span class="ljt-back" onclick="switchTab('sources-macro')">&larr; Back to sources</span>
+  <div class="ljt-metric-grid">
+    <div class="ljt-metric"><p class="ljt-metric-label">Total leads</p><p class="ljt-metric-value">${s.total}</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Touch rate</p><p class="ljt-metric-value">${s.touchRate}%</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Completed rate</p><p class="ljt-metric-value">${s.completedRate}%</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Untouched</p><p class="ljt-metric-value" style="${s.total-s.touched>0?'color:var(--color-text-danger);':''}">${s.total-s.touched}</p></div>
+  </div>`;
+  if(name==='OfferNest'){
+    html+=`<div class="ljt-card"><p style="font-weight:500;margin:0 0 6px;">Capture form review</p><p style="font-size:13px;color:var(--color-text-secondary);margin:0;">A live OfferNest lead capture form was reviewed directly (screenshot). It collects property address, phone, and email but shows no consent checkbox/disclosure and no visible bot protection. See the two related alerts on the Alerts tab.</p></div>`;
+  }
+  if(name==='LeadBridge'){
+    html+=`<div class="ljt-card"><p style="font-weight:500;margin:0 0 8px;">Time-to-first-contact distribution</p>
+    <div class="ljt-bar-row"><span class="ljt-bar-label">2\u201312 min</span><div class="ljt-bar-track"><div class="ljt-bar-fill" style="width:100%;background:var(--color-text-success);"></div></div><span style="font-size:12px;width:60px;">25 leads</span></div>
+    <div class="ljt-bar-row"><span class="ljt-bar-label">13\u2013169 min</span><div class="ljt-bar-track"><div class="ljt-bar-fill" style="width:0%;"></div></div><span style="font-size:12px;width:60px;color:var(--color-text-tertiary);">0 leads</span></div>
+    <div class="ljt-bar-row"><span class="ljt-bar-label">170\u2013361 min</span><div class="ljt-bar-track"><div class="ljt-bar-fill" style="width:80%;background:var(--color-text-warning);"></div></div><span style="font-size:12px;width:60px;">20 leads</span></div>
+    <p class="ljt-note">Clean bimodal split with a gap from 13 to 169 minutes \u2014 no lead falls in between, which is what points to two separate ingestion paths rather than random delay.</p></div>`;
+  }
+  html+=`<div class="ljt-card"><p style="font-weight:500;margin:0 0 12px;">${name} \u2014 all ${s.total} leads</p><div id="panel-source-leads-table"></div></div>`;
+  document.getElementById('panel-source-detail').innerHTML=html;
+  renderSourceLeadsTable();
+}
+
+let agentsPage = 0;
+const AGENTS_PAGE_SIZE = 15;
+function agentsGoToPage(p){ agentsPage = p; renderAgents(); }
+
+function renderAgents(){
+  const sorted = [...AGENTS].sort((a,b)=>b.attempts-a.attempts);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / AGENTS_PAGE_SIZE));
+  if(agentsPage >= totalPages) agentsPage = totalPages - 1;
+  const pageItems = sorted.slice(agentsPage*AGENTS_PAGE_SIZE, (agentsPage+1)*AGENTS_PAGE_SIZE);
+  let html=`<p style="color:var(--color-text-secondary);font-size:13px;margin:0 0 8px;">All ${AGENTS.length} agents who logged at least one outreach attempt, with leads_touched (distinct leads, not raw attempt count) \u2014 most handle under 20 leads, too thin a sample to separate skill from lead difficulty.</p>
+  <table class="ljt-table"><thead><tr><th>Agent</th><th>Leads touched</th><th>Attempts</th><th>Completed</th><th>Completion rate</th></tr></thead><tbody>`;
+  pageItems.forEach(a=>{
+    const rate = (a.completed/a.leadsTouched*100).toFixed(1);
+    html+=`<tr class="clickable" onclick="showAgent('${a.id}')">
+      <td style="font-weight:500;">${a.id}</td><td>${a.leadsTouched}</td><td>${a.attempts}</td><td>${a.completed}</td><td>${rate}%</td>
+    </tr>`;
+  });
+  html+=`</tbody></table>`;
+  html += pagerHTML('agents', agentsPage, totalPages, sorted.length, AGENTS_PAGE_SIZE);
+  document.getElementById('panel-agents-macro').innerHTML=html;
+}
+
+let agentLeadsPage = 0;
+const AGENT_LEADS_PAGE_SIZE = 10;
+function agentLeadsGoToPage(p){ agentLeadsPage = p; renderAgentLeadsTable(); }
+let currentAgentId = null;
+
+function renderAgentLeadsTable(){
+  const a = AGENTS.find(x=>x.id===currentAgentId);
+  const leadObjs = a.leadIds.map(id => LEADS.find(l=>l.id===id)).filter(Boolean);
+  const totalPages = Math.max(1, Math.ceil(leadObjs.length / AGENT_LEADS_PAGE_SIZE));
+  if(agentLeadsPage >= totalPages) agentLeadsPage = totalPages - 1;
+  const pageItems = leadObjs.slice(agentLeadsPage*AGENT_LEADS_PAGE_SIZE, (agentLeadsPage+1)*AGENT_LEADS_PAGE_SIZE);
+  let html = `<table class="ljt-table"><tbody>`;
+  pageItems.forEach(l=>{
+    html+=`<tr class="clickable" onclick="showLead('${l.id}')"><td>${l.name} <span style="color:var(--color-text-tertiary);">(${l.id})</span></td><td>${l.source}</td><td><span style="color:${OUTCOME_COLOR[l.outcome]};">${OUTCOME_LABEL[l.outcome]}</span></td></tr>`;
+  });
+  html += `</tbody></table>`;
+  html += pagerHTML('agentLeads', agentLeadsPage, totalPages, leadObjs.length, AGENT_LEADS_PAGE_SIZE);
+  document.getElementById('panel-agent-leads-table').innerHTML = html;
+}
+
+function showAgent(id){
+  const a=AGENTS.find(x=>x.id===id);
+  currentAgentId = id;
+  agentLeadsPage = 0;
+  switchTab('agent-detail');
+  const rate = (a.completed/a.leadsTouched*100).toFixed(1);
+  let html=`<span class="ljt-back" onclick="switchTab('agents-macro')">&larr; Back to agents</span>
+  <div class="ljt-metric-grid">
+    <div class="ljt-metric"><p class="ljt-metric-label">Leads touched</p><p class="ljt-metric-value">${a.leadsTouched}</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Attempts</p><p class="ljt-metric-value">${a.attempts}</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Completed</p><p class="ljt-metric-value">${a.completed}</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Completion rate</p><p class="ljt-metric-value">${rate}%</p></div>
+  </div>
+  <div class="ljt-card"><p style="font-size:13px;color:var(--color-text-secondary);margin:0;">Sample size note: with ${a.leadsTouched} leads touched, this completion rate can swing widely based on which leads happened to land in this agent's queue. On its own, this is not a reliable individual performance signal.</p></div>
+  <div class="ljt-card"><p style="font-weight:500;margin:0 0 8px;">All ${a.leadsTouched} leads this agent touched</p><div id="panel-agent-leads-table"></div></div>`;
+  document.getElementById('panel-agent-detail').innerHTML=html;
+  renderAgentLeadsTable();
+}
+
+renderAlerts();
+renderAssumptions();
+renderResults();
+renderOutreach();
+renderSources();
+renderAgents();
+</script>
+
+</body>
+</html>
