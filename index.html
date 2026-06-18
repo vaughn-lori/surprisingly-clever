@@ -127,10 +127,9 @@ h1, h2, h3, h4, h5, h6 {
   </div>
   <div class="ljt-tabs">
     <button class="ljt-tab active" data-tab="alerts">Alerts</button>
-    <button class="ljt-tab" data-tab="assumptions">Assumptions</button>
     <button class="ljt-tab" data-tab="results-macro">All leads (206)</button>
     <button class="ljt-tab" data-tab="outreach-macro">Outreach log (379)</button>
-    <button class="ljt-tab" data-tab="sources-macro">Sources <span class="ljt-tab-count">6</span></button>
+    <button class="ljt-tab" data-tab="sources-macro">Sources (6)</button>
     <button class="ljt-tab" data-tab="agents-macro">Agents (40)</button>
   </div>
   <div class="ljt-panel active" id="panel-alerts"></div>
@@ -387,7 +386,7 @@ function toggleWhyFix(key){
 function filterToIssue(key){
   resultsFilter = 'issue:' + key;
   resultsPage = 0;
-  window.__ljt_origin = 'alerts';
+  leadsOriginTab = 'alerts';
   switchTab('results-macro');
   renderResults();
 }
@@ -428,13 +427,38 @@ function renderAssumptions(){
 }
 
 let resultsFilter = 'all';
+let leadsOriginTab = 'results-macro';
+let resultsSort = { col: 'name', dir: 1 };
 let resultsPage = 0;
 let resultsSearch = '';
 const RESULTS_PAGE_SIZE = 15;
 
-function setResultsFilter(f){ resultsFilter = f; resultsPage = 0; renderResults(); }
+function setResultsFilter(f){
+  leadsOriginTab = 'results-macro'; resultsFilter = f; resultsPage = 0; renderResults(); }
 function resultsGoToPage(p){ resultsPage = p; renderResults(); }
 function setResultsSearch(v){ resultsSearch = v.trim().toLowerCase(); resultsPage = 0; renderResults(); }
+
+function setResultsSort(col){
+  if(resultsSort.col === col) resultsSort.dir *= -1;
+  else { resultsSort.col = col; resultsSort.dir = 1; }
+  resultsPage = 0;
+  renderResults();
+}
+
+function getSortedLeads(list){
+  const {col, dir} = resultsSort;
+  return [...list].sort((a,b)=>{
+    let av, bv;
+    if(col==='name') { av=a.name; bv=b.name; }
+    else if(col==='source') { av=a.source; bv=b.source; }
+    else if(col==='ttfc') { av=a.ttfc??9999; bv=b.ttfc??9999; }
+    else if(col==='outcome') { av=a.outcome; bv=b.outcome; }
+    else if(col==='issues') { av=a.issues.length; bv=b.issues.length; }
+    else { av=a.name; bv=b.name; }
+    if(typeof av==='string') return av.localeCompare(bv)*dir;
+    return (av-bv)*dir;
+  });
+}
 
 function getFilteredLeads(){
   let list = LEADS;
@@ -445,7 +469,7 @@ function getFilteredLeads(){
   if(resultsSearch){
     list = list.filter(l => l.id.toLowerCase().includes(resultsSearch) || l.name.toLowerCase().includes(resultsSearch) || l.source.toLowerCase().includes(resultsSearch));
   }
-  return list;
+  return getSortedLeads(list);
 }
 
 function renderResults(){
@@ -463,12 +487,19 @@ function renderResults(){
   <input class="ljt-search" placeholder="Search by lead ID, name, or source" value="${resultsSearch}" oninput="setResultsSearch(this.value)">
   <div class="ljt-filter-pills">
     <span class="ljt-pill ${resultsFilter==='all'?'active':''}" onclick="setResultsFilter('all')">All (${LEADS.length})</span>
-    <span class="ljt-pill ${resultsFilter==='completed'?'active':''}" onclick="setResultsFilter('completed')">Completed (${completedCount})</span>
     <span class="ljt-pill ${resultsFilter==='issues'?'active':''}" onclick="setResultsFilter('issues')">Has issue (${issueCount})</span>
-    <span class="ljt-pill ${resultsFilter==='clean'?'active':''}" onclick="setResultsFilter('clean')">No issue flagged (${cleanCount})</span>
+    <span class="ljt-pill ${resultsFilter==='clean'?'active':''}" onclick="setResultsFilter('clean')">No issue (${cleanCount})</span>
+    <span style="color:var(--color-text-tertiary);font-size:11px;align-self:center;margin:0 2px;">|</span>
+    <span class="ljt-pill ${resultsFilter==='completed'?'active':''}" onclick="setResultsFilter('completed')">Completed (${completedCount})</span>
     ${filterLabel ? `<span class="ljt-pill active">${filterLabel} (${filtered.length})</span>` : ''}
   </div>
-  <table class="ljt-table"><thead><tr><th>Lead</th><th>Source</th><th>Time to first contact</th><th>Outcome</th><th>Issues</th></tr></thead><tbody>`;
+  <table class="ljt-table"><thead><tr>
+    <th onclick="setResultsSort('name')" style="cursor:pointer;user-select:none;">Lead \${resultsSort.col==='name'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+    <th onclick="setResultsSort('source')" style="cursor:pointer;user-select:none;">Source \${resultsSort.col==='source'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+    <th onclick="setResultsSort('ttfc')" style="cursor:pointer;user-select:none;">Time to first contact \${resultsSort.col==='ttfc'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+    <th onclick="setResultsSort('outcome')" style="cursor:pointer;user-select:none;">Outcome \${resultsSort.col==='outcome'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+    <th onclick="setResultsSort('issues')" style="cursor:pointer;user-select:none;">Issues \${resultsSort.col==='issues'?(resultsSort.dir===1?'↑':'↓'):'↕'}</th>
+  </tr></thead><tbody>`;
   if(pageItems.length === 0){
     html += `<tr><td colspan="5" style="text-align:center;color:var(--color-text-tertiary);padding:20px;">No leads match this filter.</td></tr>`;
   }
@@ -491,8 +522,8 @@ function showLead(id){
   const l=LEADS.find(x=>x.id===id);
   if(!l) return;
   switchTab('lead-detail');
-  const _origin = window.__ljt_origin || 'results-macro';
-  let html=`<span class="ljt-back" onclick="switchTab('${_origin}');window.__ljt_origin=null;">&larr; Back to ${_origin==='alerts'?'alerts':'all leads'}</span>
+  const _origin = leadsOriginTab || 'results-macro';
+  let html=`<span class="ljt-back" onclick="leadsOriginTab='results-macro';switchTab('${_origin}');">&larr; Back to ${_origin==='alerts'?'Alerts':'all leads'}</span>
   <div class="ljt-card">
     <p style="font-weight:500;font-size:16px;margin:0;">${l.name}</p>
     <p style="color:var(--color-text-secondary);font-size:13px;margin:2px 0 0;">${l.id} &middot; ${l.source} &middot; ${l.type}</p>
