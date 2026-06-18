@@ -79,7 +79,9 @@ h1, h2, h3, h4, h5, h6 {
 .ljt-row-flex { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .ljt-event { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-left: 2px solid var(--color-border-tertiary); padding-left: 12px; margin-left: 6px; position: relative; }
 .ljt-event::before { content: ""; position: absolute; left: -5px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-border-secondary); }
-.ljt-hop { font-size: 11px; color: var(--color-text-tertiary); padding: 2px 0 2px 12px; margin-left: 6px; }
+.ljt-hop { display:flex; align-items:center; gap:6px; padding:4px 0 4px 12px; border-left:2px solid var(--color-border); margin-left:6px; }
+.ljt-hop-bar { display:inline-block; height:4px; background:var(--color-border); border-radius:2px; min-width:4px; transition:width 0.3s; }
+.ljt-hop-label { font-size:11px; color:var(--color-text-tertiary); white-space:nowrap; }
 .ljt-back { font-size: 13px; color: var(--color-text-info); cursor: pointer; margin-bottom: 12px; display: inline-block; font-weight: 500; }
 .ljt-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
 .ljt-note { font-size: 12px; color: var(--color-text-tertiary); margin: 8px 0 0; }
@@ -128,7 +130,7 @@ h1, h2, h3, h4, h5, h6 {
     <button class="ljt-tab" data-tab="assumptions">Assumptions</button>
     <button class="ljt-tab" data-tab="results-macro">All leads (206)</button>
     <button class="ljt-tab" data-tab="outreach-macro">Outreach log (379)</button>
-    <button class="ljt-tab" data-tab="sources-macro">Sources</button>
+    <button class="ljt-tab" data-tab="sources-macro">Sources <span class="ljt-tab-count">6</span></button>
     <button class="ljt-tab" data-tab="agents-macro">Agents (40)</button>
   </div>
   <div class="ljt-panel active" id="panel-alerts"></div>
@@ -210,8 +212,8 @@ const ISSUE_META = {
     fixNote: "A single conditional check in the send path. Should also get a compliance sign-off given the legal exposure, but the code itself is trivial.",
     notifyChannel: "email", notifyTeam: "compliance@clever.com" },
   intake_form_gap: { label: "Partner intake form missing consent disclosure", severity: 3, count: SUMMARY.intake_form_gap, automatable: false, owner: "Compliance / legal", isNew: true,
-    why: "A live OfferNest capture form (screenshot reviewed directly) collects property address, phone, and email with a single \u201cGet An Offer\u201d button \u2014 there is no visible consent checkbox, no \u201cby submitting you agree to be contacted by call/text, possibly using automated technology\u201d disclosure, and no link to a privacy policy or terms of service. This is upstream of, and likely explains, the blank/implicit consent_sms records traced back to this source.",
-    fix: "Flag to compliance/legal and to OfferNest directly: any partner-facing capture form needs a clear, conspicuous consent disclosure and an affirmative opt-in mechanism before a phone number reaches our dialer, regardless of which exact consent standard applies in the lead's state. This is a partner contract and form-design issue, not something our own dialer logic can fix after the fact.",
+    why: "A live OfferNest capture form (screenshot reviewed directly) has no consent checkbox, no call/text disclosure, and no privacy policy link. Given that missing consent fields appear across all six partners, this is almost certainly not OfferNest-specific \u2014 it likely reflects a shared form template or a missing requirement in the partner onboarding contract. A full journey audit of all six partner capture forms is recommended. Note: this data is being shared with third-party partners as part of a remediation process \u2014 any communication referencing specific form screenshots should be reviewed by legal before distribution.",
+    fix: "Conduct a full journey audit of all six partner capture forms, not just OfferNest. Define a standard Clever consent form template (checkbox + conspicuous TCPA-compliant disclosure language) and make it a contractual requirement for all partners at onboarding and renewal. Update partner contracts to include data-sharing language specifying that leads and form data are shared with Clever for matching and outreach purposes. Third-party recipients of this diagnostic should note that form screenshots are shared under NDA for remediation purposes only.",
     fixNote: "Current consent rules are genuinely in flux right now \u2014 the FCC's standard generally still calls for clear, conspicuous written consent gathered one seller at a time, but a Fifth Circuit ruling in Feb 2026 (Bradford v. Sovereign Pest Control) held the statute itself only requires oral-or-written express consent, and that holding currently only binds Texas/Louisiana/Mississippi. Regardless of which standard ultimately applies, this form clears neither bar \u2014 there's no disclosure of any kind.",
     notifyChannel: "email", notifyTeam: "legal@clever.com" },
   bot_protection_gap: { label: "Partner intake form has no visible bot protection or input sanitization", severity: 2, count: SUMMARY.bot_protection_gap, automatable: false, owner: "Security / engineering", isNew: true,
@@ -226,7 +228,7 @@ const ISSUE_META = {
     notifyChannel: "email", notifyTeam: "partner-success@clever.com" },
   duplicate: { label: "Duplicate across partners", severity: 2, count: SUMMARY.duplicates, automatable: true, owner: "Engineering",
     why: "7 phone numbers appear as separate lead_ids from two different partners within days of each other (14 leads total) \u2014 almost certainly the same homeowner shopping multiple lead-gen sites. In 5 of those 7 pairs, only the first-received lead was ever marked completed; the second never was. In the other 2 pairs, both leads independently got completed by two different agents \u2014 not a missed lead, but duplicated effort.",
-    fix: "Add a cross-partner phone-match check at intake: if a normalized phone number already exists as an open lead, route the new submission to the same agent already working the first one rather than creating a second independent thread. The data supports a first-received-gets-priority rule \u2014 zero pairs show the second lead succeeding where the first failed.",
+    fix: "Add a cross-partner phone-match check at intake: if a normalized phone number already exists as an open lead, route the new submission to the same agent already working the first one. Attribution call: first-received gets priority. The data supports this \u2014 in 5 of 7 pairs, only the first-received lead was completed; zero pairs show the second record succeeding where the first failed. For the 2 pairs where both leads were independently completed by different agents, deal credit should go to the agent on the first-received record, and the second agent's work should be flagged as a duplicate effort. Log the second submission as a duplicate reference (not a new open lead) so the intake source still gets credit for the referral.",
     fixNote: "A dedup check at the intake layer. Self-contained engineering work, no partner dependency, though phone normalization should land first.",
     notifyChannel: "slack", notifyTeam: "#eng-outreach-platform" },
   conflicting_type: { label: "Conflicting buyer/seller tag", severity: 1, count: SUMMARY.conflicting_type, automatable: true, owner: "Engineering",
@@ -258,7 +260,7 @@ const ISSUE_LABELS = Object.fromEntries(Object.entries(ISSUE_META).map(([k,v]) =
 
 function sevClass(sev) { return sev===3?'ljt-badge-sev3':sev===2?'ljt-badge-sev2':'ljt-badge-sev1'; }
 function sevDotVar(sev) { return sev===3?'var(--color-text-danger)':sev===2?'var(--color-text-warning)':'var(--color-text-info)'; }
-function fmtDate(iso){ const d=new Date(iso); return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+function fmtDate(iso){ if(!iso) return '—'; const d=new Date(iso); if(isNaN(d.getTime())) return iso; return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
 function fmtUSD(n){ return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n); }
 function fmtMin(m){ if(m==null) return '\u2014'; if(m<60) return m+' min'; const h=Math.floor(m/60), r=m%60; return h+'h'+(r?' '+r+'m':''); }
 
@@ -292,24 +294,40 @@ function calcRevenuePerLead(){
 }
 
 function renderAlerts(){
-  const order=['untouched','sms_dead_end','consent_violation','intake_form_gap','bot_protection_gap','slow_response','duplicate','conflicting_type','missing_consent_field','missing_email','redundant_contact'];
+  // Sort by severity desc, then count desc
+  const order = Object.keys(ISSUE_META).sort((a,b)=>{
+    const sa = ISSUE_META[a].severity, sb = ISSUE_META[b].severity;
+    if(sb !== sa) return sb - sa;
+    return ISSUE_META[b].count - ISSUE_META[a].count;
+  });
   const total=order.reduce((a,k)=>a+ISSUE_META[k].count,0);
   const revPerLead = calcRevenuePerLead();
   const untouchedImpact = revPerLead * SUMMARY.untouched;
   const smsDeadEndImpact = revPerLead * SUMMARY.sms_dead_end;
 
+  // Compute additional metrics
+  const avgAttempts = (SUMMARY.total_attempts / SUMMARY.total_leads).toFixed(1);
+  const smsAttempts = ATTEMPTS ? ATTEMPTS.filter(a=>a.channel==='sms').length : '—';
+  const callAttempts = ATTEMPTS ? ATTEMPTS.filter(a=>a.channel==='call').length : '—';
+  const contactedRate = (100 - (SUMMARY.untouched/SUMMARY.total_leads*100)).toFixed(1);
+  const fcr = ((SUMMARY.total_leads - SUMMARY.untouched - SUMMARY.sms_dead_end - SUMMARY.consent_violation) / SUMMARY.total_leads * 100).toFixed(1);
+
   let html=`<div class="ljt-metric-grid">
     <div class="ljt-metric"><p class="ljt-metric-label">Total leads</p><p class="ljt-metric-value">${SUMMARY.total_leads}</p></div>
-    <div class="ljt-metric"><p class="ljt-metric-label">Touch rate</p><p class="ljt-metric-value">${SUMMARY.touch_rate}%</p></div>
-    <div class="ljt-metric"><p class="ljt-metric-label">Completed rate</p><p class="ljt-metric-value">${SUMMARY.completed_rate}%</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Contact rate</p><p class="ljt-metric-value">${contactedRate}%</p><p class="ljt-metric-sub">Leads reached at least once</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Touch rate</p><p class="ljt-metric-value">${SUMMARY.touch_rate}%</p><p class="ljt-metric-sub">Leads with any attempt logged</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Completed rate</p><p class="ljt-metric-value">${SUMMARY.completed_rate}%</p><p class="ljt-metric-sub">Conversion to agent match</p></div>
     <div class="ljt-metric"><p class="ljt-metric-label">Open alerts</p><p class="ljt-metric-value">${total}</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Total attempts</p><p class="ljt-metric-value">${SUMMARY.total_attempts}</p><p class="ljt-metric-sub">Calls + SMS combined</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Avg attempts / lead</p><p class="ljt-metric-value">${avgAttempts}</p><p class="ljt-metric-sub">Dial/text cadence depth</p></div>
+    <div class="ljt-metric"><p class="ljt-metric-label">Compliance exposure</p><p class="ljt-metric-value" style="color:var(--color-text-danger);">${SUMMARY.consent_violation + SUMMARY.intake_form_gap}</p><p class="ljt-metric-sub">Leads with consent issues</p></div>
   </div>
   <div class="ljt-card" style="border-color:#0EC18F;">
     <div class="ljt-row-flex">
       <p class="ljt-heading" style="margin:0;">Estimated revenue impact \u2014 adjust live</p>
       <span class="ljt-badge ljt-badge-money">Only 2 of 11 issues monetized</span>
     </div>
-    <p class="ljt-assumption" style="margin:6px 0 12px;">Placeholder assumptions, not Clever's real numbers \u2014 see the Assumptions tab. Drag to recalculate instantly.</p>
+    <p class="ljt-assumption" style="margin:6px 0 12px;">Placeholder assumptions, not Clever's real numbers \u2014 <a href=\"#\" onclick=\"switchTab('assumptions');return false;\" style=\"color:var(--color-text-info);\">see Assumptions</a>. Drag to recalculate instantly.</p>
     <div class="ljt-calc-row"><span class="ljt-calc-label">Typical home price</span><input type="range" min="150000" max="800000" step="10000" value="${homePrice}" oninput="homePrice=parseInt(this.value);document.getElementById('hp-out').textContent=fmtUSD(homePrice);renderAlerts();" style="flex:1;min-width:120px;"><span id="hp-out" style="font-weight:500;min-width:90px;">${fmtUSD(homePrice)}</span></div>
     <div class="ljt-calc-row"><span class="ljt-calc-label">Listing fee rate</span><input type="range" min="1" max="3" step="0.1" value="${listingFeePct}" oninput="listingFeePct=parseFloat(this.value);document.getElementById('lf-out').textContent=listingFeePct.toFixed(1)+'%';renderAlerts();" style="flex:1;min-width:120px;"><span id="lf-out" style="font-weight:500;min-width:90px;">${listingFeePct.toFixed(1)}%</span></div>
     <div class="ljt-calc-row"><span class="ljt-calc-label">Clever's referral cut</span><input type="range" min="10" max="50" step="1" value="${referralPct}" oninput="referralPct=parseInt(this.value);document.getElementById('rp-out').textContent=referralPct+'%';renderAlerts();" style="flex:1;min-width:120px;"><span id="rp-out" style="font-weight:500;min-width:90px;">${referralPct}%</span></div>
@@ -369,6 +387,7 @@ function toggleWhyFix(key){
 function filterToIssue(key){
   resultsFilter = 'issue:' + key;
   resultsPage = 0;
+  window.__ljt_origin = 'alerts';
   switchTab('results-macro');
   renderResults();
 }
@@ -472,7 +491,8 @@ function showLead(id){
   const l=LEADS.find(x=>x.id===id);
   if(!l) return;
   switchTab('lead-detail');
-  let html=`<span class="ljt-back" onclick="switchTab('results-macro')">&larr; Back to all leads</span>
+  const _origin = window.__ljt_origin || 'results-macro';
+  let html=`<span class="ljt-back" onclick="switchTab('${_origin}');window.__ljt_origin=null;">&larr; Back to ${_origin==='alerts'?'alerts':'all leads'}</span>
   <div class="ljt-card">
     <p style="font-weight:500;font-size:16px;margin:0;">${l.name}</p>
     <p style="color:var(--color-text-secondary);font-size:13px;margin:2px 0 0;">${l.id} &middot; ${l.source} &middot; ${l.type}</p>
@@ -504,13 +524,20 @@ function showLead(id){
   }
   html+=`<div class="ljt-card"><p style="font-weight:500;margin:0 0 8px;">Timeline</p>
     <div class="ljt-event"><div><span style="font-size:13px;font-weight:500;">Lead received</span><br><span style="font-size:12px;color:var(--color-text-secondary);">${fmtDate(l.received)} via ${l.source}</span></div></div>`;
-  let prevTime = new Date(l.received);
-  l.events.forEach(e=>{
-    const t = new Date(e.at);
-    const hopMin = Math.round((t - prevTime)/60000);
-    html+=`<div class="ljt-hop">+ ${fmtMin(hopMin)} since previous step</div>`;
-    html+=`<div class="ljt-event"><div><span style="font-size:13px;font-weight:500;">${e.ch.toUpperCase()} &middot; ${e.status}</span><br><span style="font-size:12px;color:var(--color-text-secondary);">${fmtDate(e.at)} &middot; ${e.agent}</span></div></div>`;
-    prevTime = t;
+  const recvMs = new Date(l.received).getTime();
+  let prevOffsetMin = 0;
+  l.events.forEach((e,i)=>{
+    const absMs = recvMs + e.offsetMin * 60000;
+    const absDate = new Date(absMs);
+    const hopMin = e.offsetMin - prevOffsetMin;
+    const pct = Math.min(100, Math.round(hopMin / Math.max(1, e.offsetMin) * 100));
+    const barW = Math.min(120, Math.max(8, Math.round(hopMin / 5)));
+    html+=`<div class="ljt-hop">
+      <span class="ljt-hop-bar" style="width:${barW}px;"></span>
+      <span class="ljt-hop-label">+${fmtMin(hopMin)}</span>
+    </div>`;
+    html+=`<div class="ljt-event"><div><span style="font-size:13px;font-weight:500;">${e.ch.toUpperCase()} &middot; ${e.status}</span><br><span style="font-size:12px;color:var(--color-text-secondary);">${absDate.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})} &middot; ${e.agent}</span></div></div>`;
+    prevOffsetMin = e.offsetMin;
   });
   if(!l.events.length) html+=`<div class="ljt-event"><div><span style="font-size:13px;color:var(--color-text-danger);font-weight:500;">No outreach attempts ever recorded</span></div></div>`;
   html+=`</div>`;
