@@ -270,6 +270,12 @@ function switchTab(name){
   document.querySelectorAll('.ljt-panel').forEach(p=>p.classList.remove('active'));
   const p=document.getElementById('panel-'+name);
   if(p) p.classList.add('active');
+  if(name==='results-macro') renderResults();
+  else if(name==='outreach-macro') renderOutreach();
+  else if(name==='sources-macro') renderSources();
+  else if(name==='agents-macro') renderAgents();
+  else if(name==='bonus-macro') renderBonus();
+  else if(name==='alerts') renderAlerts();
 }
 document.querySelectorAll('.ljt-tab').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
 
@@ -895,6 +901,7 @@ function renderBonus(){
 }
 
 renderAgents();
+renderBonus();
 </script>
 
 </body>
