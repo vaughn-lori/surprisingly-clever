@@ -403,71 +403,7 @@ function toggleWhyFix(key){
 
 function resolveAlert(key){
   resolvedAlerts.add(key);
-  
-function renderBonus(){
-  var callFirstTotal=176,callFirstComp=89,smsFirstTotal=12,smsFirstComp=0;
-  var blitzTotal=45,blitzComp=0,spreadTotal=76,spreadComp=42;
-  var ampCleanComp=5,ampCleanTotal=16,lbCleanComp=14,lbCleanTotal=18;
-  var hourData={10:{t:9,c:1},11:{t:7,c:4},12:{t:10,c:6},13:{t:16,c:10},14:{t:19,c:9},15:{t:13,c:7},16:{t:12,c:4},17:{t:21,c:8},18:{t:13,c:5},19:{t:24,c:11},20:{t:3,c:2},21:{t:3,c:1},22:{t:2,c:1},23:{t:1,c:0}};
-
-  function callout(txt){ return '<div style="background:var(--color-background-info);border-left:3px solid var(--color-text-info);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-top:10px;">'+txt+'</div>'; }
-  function desc(txt){ return '<p style="font-size:13px;color:var(--color-text-secondary);line-height:1.6;margin:0 0 12px;">'+txt+'</p>'; }
-  function statBox(val,lbl,col,bg){ return '<div style="background:'+bg+';border-radius:8px;padding:14px 16px;"><div style="font-family:Rubik,sans-serif;font-size:28px;font-weight:700;color:'+col+';line-height:1;">'+val+'</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">'+lbl+'</div></div>'; }
-  function grid2(a,b){ return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'+a+b+'</div>'; }
-  function cardWrap(n,dot,title,body){ return '<div class="ljt-card" style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-text-tertiary);">Finding '+n+'</span><span style="width:8px;height:8px;border-radius:50%;background:'+dot+';display:inline-block;"></span></div><p style="font-weight:600;font-size:15px;font-family:Rubik,sans-serif;margin:0 0 8px;">'+title+'</p>'+body+'</div>'; }
-
-  var f1 = cardWrap(1,'var(--color-text-danger)','SMS-first outreach completes at 0%',
-    desc('12 leads received SMS as their first outreach attempt. None converted. Call-first leads complete at 51%. Channel order matters — not just channel availability.')
-    + grid2(
-        statBox('0%','SMS-first completion ('+smsFirstTotal+' leads)','var(--color-text-danger)','var(--color-background-danger)'),
-        statBox('51%','Call-first completion ('+callFirstTotal+' leads)','var(--color-text-success)','var(--color-background-success)')
-      )
-    + callout('<strong style="color:var(--color-text-primary);">Question for the team:</strong> Is SMS-first an intentional strategy for certain lead types, or cadence logic that was never validated against outcomes?')
-  );
-
-  var f2 = cardWrap(2,'var(--color-text-danger)','Blitz outreach (all attempts within 60 min) completes at 0%',
-    desc('45 leads had every outreach attempt fired within a single hour — none converted. Leads with attempts spread over more than 60 minutes completed at 55%. Hitting a lead 3x in one hour appears to kill the conversation rather than create urgency.')
-    + grid2(
-        statBox('0%','Blitz completion ('+blitzTotal+' leads, all attempts within 60 min)','var(--color-text-danger)','var(--color-background-danger)'),
-        statBox('55%','Spread completion ('+spreadTotal+' leads, attempts over 60 min apart)','var(--color-text-success)','var(--color-background-success)')
-      )
-    + callout('<strong style="color:var(--color-text-primary);">Question for the team:</strong> Is the blitz cadence deliberate? It is not working in this dataset. A/B testing a paced cadence (call now, SMS +2hr, call +24hr) would be the natural next step.')
-  );
-
-  var f3rows = '<tr style="border-top:1px solid var(--color-border);"><td style="padding:8px 0;font-weight:500;">AgentMatch Pro</td><td style="text-align:right;padding:8px 0;color:var(--color-text-secondary);">'+ampCleanTotal+'</td><td style="text-align:right;padding:8px 0;font-family:Rubik,sans-serif;font-weight:700;color:var(--color-text-danger);">31%</td></tr>'
-    + '<tr style="border-top:1px solid var(--color-border);"><td style="padding:8px 0;font-weight:500;">LeadBridge</td><td style="text-align:right;padding:8px 0;color:var(--color-text-secondary);">'+lbCleanTotal+'</td><td style="text-align:right;padding:8px 0;font-family:Rubik,sans-serif;font-weight:700;color:var(--color-text-success);">78%</td></tr>';
-  var f3table = '<div style="background:var(--color-background-secondary);border-radius:8px;padding:12px 16px;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 0 8px;">Source</th><th style="text-align:right;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 0 8px;">Clean leads</th><th style="text-align:right;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 0 8px;">Completion rate</th></tr></thead><tbody>'+f3rows+'</tbody></table></div>';
-  var f3 = cardWrap(3,'var(--color-text-warning)','AgentMatch Pro lead quality signal',
-    desc('AgentMatch Pro clean leads (no pipeline failures) complete at 31% vs LeadBridge at 78% on clean leads. Every other source improves when you filter out issues. AgentMatch does not. This is a lead intent signal, not a pipeline execution problem.')
-    + f3table
-    + callout('<strong style="color:var(--color-text-primary);">Question for the team:</strong> Is AgentMatch a known underperformer, or is this new signal? If lead quality is genuinely lower, that is a partner contract conversation, not a pipeline fix.')
-  );
-
-  var hours=[10,11,12,13,14,15,16,17,18,19,20,21,22,23];
-  var rows='';
-  for(var i=0;i<hours.length;i++){
-    var h=hours[i];
-    var d=hourData[h];
-    var rate=d.t?Math.round(d.c/d.t*100):0;
-    var barW=Math.round(rate*1.4);
-    var col=h===10?'var(--color-text-danger)':rate>=50?'var(--color-text-success)':'var(--color-text-info)';
-    var rowBg=h===10?'background:var(--color-background-danger);':'';
-    var fw=h===10?'600':'400';
-    var lc=h===10?'var(--color-text-danger)':'inherit';
-    rows+='<tr style="border-top:1px solid var(--color-border);'+rowBg+'"><td style="padding:7px 8px 7px 0;font-weight:'+fw+';color:'+lc+';">'+h+':00</td><td style="text-align:right;padding:7px 8px 7px 0;color:var(--color-text-secondary);">'+d.t+'</td><td style="padding:7px 0;"><div style="display:flex;align-items:center;gap:8px;"><div style="width:'+barW+'px;height:6px;background:'+col+';border-radius:3px;min-width:2px;"></div><span style="font-weight:600;font-family:Rubik,sans-serif;color:'+col+';">'+rate+'%</span></div></td></tr>';
-  }
-  var f4table='<div style="overflow-x:auto;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 8px 8px 0;">Hour</th><th style="text-align:right;font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 8px 8px 0;">Leads</th><th style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 0 8px;">Rate</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-  var f4=cardWrap(4,'var(--color-text-info)','10am first contact outlier: 11% completion',
-    desc('Every contact hour between 11am and 10pm completes at 33-67%. Leads first contacted at 10am complete at 11% (1 of 9). Small sample, but a notable outlier worth tracking as more data accumulates.')
-    + f4table
-    + callout('<strong style="color:var(--color-text-primary);">Worth monitoring:</strong> 9 leads is too small to draw a conclusion. Flag and revisit with 30 days of data. If 10am consistently underperforms, there may be an agent scheduling pattern or lead-type cluster worth investigating.')
-  );
-
-  var intro='<p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 20px;line-height:1.6;">Four patterns found after the core diagnostic was complete. These emerged from looking at cadence and sequencing rather than individual lead failures.</p>';
-  document.getElementById('panel-bonus-macro').innerHTML='<div style="max-width:700px;">'+intro+f1+f2+f3+f4+'</div>';
-}
-
-renderAlerts();
+  renderAlerts();
 }
 
 function filterToIssue(key){
@@ -900,4 +836,66 @@ function showAgent(id){
   renderAgentLeadsTable();
 }
 
->
+renderAlerts();
+renderAssumptions();
+renderResults();
+renderOutreach();
+renderSources();
+function renderBonus(){
+  var smsFirstTotal=12,callFirstTotal=176,callFirstComp=89;
+  var blitzTotal=45,spreadTotal=76,spreadComp=42;
+  var ampCleanComp=5,ampCleanTotal=16,lbCleanComp=14,lbCleanTotal=18;
+  var hourData={10:{t:9,c:1},11:{t:7,c:4},12:{t:10,c:6},13:{t:16,c:10},14:{t:19,c:9},15:{t:13,c:7},16:{t:12,c:4},17:{t:21,c:8},18:{t:13,c:5},19:{t:24,c:11},20:{t:3,c:2},21:{t:3,c:1},22:{t:2,c:1},23:{t:1,c:0}};
+
+  function co(txt){ return '<div style="background:var(--color-background-info);border-left:3px solid var(--color-text-info);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--color-text-secondary);line-height:1.5;margin-top:10px;">'+txt+'</div>'; }
+  function de(txt){ return '<p style="font-size:13px;color:var(--color-text-secondary);line-height:1.6;margin:0 0 12px;">'+txt+'</p>'; }
+  function sb(val,lbl,col,bg){ return '<div style="background:'+bg+';border-radius:8px;padding:14px 16px;"><div style="font-family:Rubik,sans-serif;font-size:28px;font-weight:700;color:'+col+';line-height:1;">'+val+'</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px;">'+lbl+'</div></div>'; }
+  function g2(a,b){ return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'+a+b+'</div>'; }
+  function cw(n,dot,title,body){ return '<div class="ljt-card" style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-text-tertiary);">Finding '+n+'</span><span style="width:8px;height:8px;border-radius:50%;background:'+dot+';display:inline-block;"></span></div><p style="font-weight:600;font-size:15px;font-family:Rubik,sans-serif;margin:0 0 8px;">'+title+'</p>'+body+'</div>'; }
+
+  var f1=cw(1,'var(--color-text-danger)','SMS-first outreach completes at 0%',
+    de('12 leads received SMS as their first outreach attempt. None converted. Call-first leads complete at 51%. Channel order matters, not just channel availability.')
+    +g2(sb('0%','SMS-first ('+smsFirstTotal+' leads)','var(--color-text-danger)','var(--color-background-danger)'),
+        sb('51%','Call-first ('+callFirstTotal+' leads)','var(--color-text-success)','var(--color-background-success)'))
+    +co('<strong style="color:var(--color-text-primary);">Question for the team:</strong> Is SMS-first an intentional strategy for certain lead types, or cadence logic that was never validated against outcomes?'));
+
+  var f2=cw(2,'var(--color-text-danger)','Blitz outreach (all attempts within 60 min) completes at 0%',
+    de('45 leads had every outreach attempt fired within a single hour and none converted. Leads with attempts spread over more than 60 minutes completed at 55%. Hitting a lead 3x in one hour appears to kill the conversation rather than create urgency.')
+    +g2(sb('0%','Blitz ('+blitzTotal+' leads, all within 60 min)','var(--color-text-danger)','var(--color-background-danger)'),
+        sb('55%','Spread ('+spreadTotal+' leads, over 60 min apart)','var(--color-text-success)','var(--color-background-success)'))
+    +co('<strong style="color:var(--color-text-primary);">Question for the team:</strong> Is the blitz cadence deliberate? It is not working in this dataset. A paced cadence (call now, SMS +2hr, call +24hr) would be worth A/B testing.'));
+
+  var f3rows='<tr style="border-top:1px solid var(--color-border);"><td style="padding:8px 0;font-weight:500;">AgentMatch Pro</td><td style="text-align:right;padding:8px 0;color:var(--color-text-secondary);">'+ampCleanTotal+'</td><td style="text-align:right;padding:8px 0;font-family:Rubik,sans-serif;font-weight:700;color:var(--color-text-danger);">31%</td></tr><tr style="border-top:1px solid var(--color-border);"><td style="padding:8px 0;font-weight:500;">LeadBridge</td><td style="text-align:right;padding:8px 0;color:var(--color-text-secondary);">'+lbCleanTotal+'</td><td style="text-align:right;padding:8px 0;font-family:Rubik,sans-serif;font-weight:700;color:var(--color-text-success);">78%</td></tr>';
+  var f3tbl='<div style="background:var(--color-background-secondary);border-radius:8px;padding:12px 16px;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 0 8px;">Source</th><th style="text-align:right;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 0 8px;">Clean leads</th><th style="text-align:right;font-size:11px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 0 8px;">Completion rate</th></tr></thead><tbody>'+f3rows+'</tbody></table></div>';
+  var f3=cw(3,'var(--color-text-warning)','AgentMatch Pro lead quality signal',
+    de('AgentMatch Pro clean leads (no pipeline failures) complete at 31% vs LeadBridge at 78% on clean leads. Every other source improves when you filter out issues. AgentMatch does not. This is a lead intent signal, not a pipeline execution problem.')
+    +f3tbl
+    +co('<strong style="color:var(--color-text-primary);">Question for the team:</strong> Is AgentMatch a known underperformer, or is this new signal? If lead quality is genuinely lower, that is a partner contract conversation, not a pipeline fix.'));
+
+  var hrs=[10,11,12,13,14,15,16,17,18,19,20,21,22,23];
+  var rows='';
+  for(var i=0;i<hrs.length;i++){
+    var h=hrs[i];var d=hourData[h];
+    var rate=d.t?Math.round(d.c/d.t*100):0;
+    var barW=Math.round(rate*1.4);
+    var col=h===10?'var(--color-text-danger)':rate>=50?'var(--color-text-success)':'var(--color-text-info)';
+    var rbg=h===10?'background:var(--color-background-danger);':'';
+    var fw=h===10?'600':'400';
+    var lc=h===10?'var(--color-text-danger)':'inherit';
+    rows+='<tr style="border-top:1px solid var(--color-border);'+rbg+'"><td style="padding:7px 8px 7px 0;font-weight:'+fw+';color:'+lc+';">'+h+':00</td><td style="text-align:right;padding:7px 8px 7px 0;color:var(--color-text-secondary);">'+d.t+'</td><td style="padding:7px 0;"><div style="display:flex;align-items:center;gap:8px;"><div style="width:'+barW+'px;height:6px;background:'+col+';border-radius:3px;min-width:2px;"></div><span style="font-weight:600;font-family:Rubik,sans-serif;color:'+col+';">'+rate+'%</span></div></td></tr>';
+  }
+  var f4tbl='<div style="overflow-x:auto;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 8px 8px 0;">Hour</th><th style="text-align:right;font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 8px 8px 0;">Leads</th><th style="font-size:10px;font-weight:600;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em;padding:0 0 8px;">Rate</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  var f4=cw(4,'var(--color-text-info)','10am first contact outlier: 11% completion',
+    de('Every contact hour between 11am and 10pm completes at 33-67%. Leads first contacted at 10am complete at 11% (1 of 9). Small sample but a notable outlier worth tracking as data accumulates.')
+    +f4tbl
+    +co('<strong style="color:var(--color-text-primary);">Worth monitoring:</strong> 9 leads is too small to draw a conclusion. Flag and revisit with 30 days of data. If 10am consistently underperforms, there may be an agent scheduling pattern worth investigating.'));
+
+  var intro='<p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 20px;line-height:1.6;">Four patterns found after the core diagnostic was complete. These emerged from looking at cadence and sequencing rather than individual lead failures.</p>';
+  document.getElementById('panel-bonus-macro').innerHTML='<div style="max-width:700px;">'+intro+f1+f2+f3+f4+'</div>';
+}
+
+renderAgents();
+</script>
+
+</body>
+</html>
