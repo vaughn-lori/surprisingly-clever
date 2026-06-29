@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Health Monitor — Surprisingly Clever</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-text-primary: #22293b;
+  --color-text-secondary: #5a6a85;
+  --color-text-tertiary: #8a9ab5;
+  --color-text-info: #0B91DF;
+  --color-text-success: #0d7a5f;
+  --color-text-warning: #92520a;
+  --color-text-danger: #b91c1c;
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f4f6f9;
+  --color-bg-info: #e6f4fc;
+  --color-bg-success: #e6f7f3;
+  --color-bg-warning: #fef3e2;
+  --color-bg-danger: #fef2f2;
+  --color-border: #dde2ec;
+  --color-border-md: #c8d0df;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout ── */
+.page { max-width: 1000px; margin: 0 auto; padding: 32px 24px 80px; }
+
+/* ── Header ── */
+.monitor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.doc-logo { display: flex; align-items: center; gap: 8px; }
+.doc-logo-icon { width: 26px; height: 26px; background: var(--color-text-info); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.doc-logo-icon svg { width: 13px; height: 13px; fill: white; }
+.doc-logo-name { font-family: 'Rubik', sans-serif; font-weight: 600; font-size: 14px; }
+.doc-logo-sub { font-size: 12px; color: var(--color-text-tertiary); margin-left: 4px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.last-updated { font-size: 12px; color: var(--color-text-tertiary); }
+.health-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.health-pill.healthy { background: var(--color-bg-success); color: var(--color-text-success); }
+.health-pill.warning { background: var(--color-bg-warning); color: var(--color-text-warning); }
+.health-pill.critical { background: var(--color-bg-danger); color: var(--color-text-danger); }
+.health-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* ── Section labels ── */
+.section-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; margin-top: 28px;
+}
+.section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--color-text-tertiary);
+}
+.section-rule { flex: 1; height: 1px; background: var(--color-border); }
+.section-time {
+  font-size: 10px; color: var(--color-text-tertiary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 2px 8px;
+}
+
+/* ── Alert strip ── */
+.alert-strip { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.alert-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+}
+.alert-item.critical { border-color: #fca5a5; background: var(--color-bg-danger); }
+.alert-item.warning  { border-color: #fcd34d; background: var(--color-bg-warning); }
+.alert-item.ok       { border-color: #6ee7b7; background: var(--color-bg-success); }
+.alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.alert-dot.critical { background: var(--color-text-danger); }
+.alert-dot.warning  { background: var(--color-text-warning); }
+.alert-dot.ok       { background: var(--color-text-success); }
+.alert-text { flex: 1; font-size: 13px; font-weight: 500; }
+.alert-meta { font-size: 11px; color: var(--color-text-tertiary); }
+.alert-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 8px;
+  border-radius: var(--radius-md); white-space: nowrap;
+}
+.alert-badge.critical { background: var(--color-text-danger); color: white; }
+.alert-badge.warning  { background: var(--color-text-warning); color: white; }
+.alert-badge.ok       { background: var(--color-text-success); color: white; }
+
+/* ── Daily metric grid ── */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+@media (max-width: 640px) { .metric-grid { grid-template-columns: 1fr 1fr; } }
+
+.metric-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.metric-card.ok     { border-top: 3px solid #6ee7b7; }
+.metric-card.warn   { border-top: 3px solid #fcd34d; }
+.metric-card.bad    { border-top: 3px solid var(--color-text-danger); }
+
+.metric-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--color-text-tertiary);
+  margin-bottom: 6px;
+}
+.metric-value {
+  font-family: 'Rubik', sans-serif;
+  font-size: 26px; font-weight: 700;
+  line-height: 1; margin-bottom: 4px;
+}
+.metric-value.ok   { color: var(--color-text-success); }
+.metric-value.warn { color: var(--color-text-warning); }
+.metric-value.bad  { color: var(--color-text-danger); }
+.metric-value.neutral { color: var(--color-text-primary); }
+.metric-target { font-size: 11px; color: var(--color-text-tertiary); }
+.metric-target strong { color: var(--color-text-secondary); }
+.metric-delta {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 500; margin-top: 4px;
+}
+.metric-delta.up-good   { color: var(--color-text-success); }
+.metric-delta.down-good { color: var(--color-text-success); }
+.metric-delta.up-bad    { color: var(--color-text-danger); }
+.metric-delta.down-bad  { color: var(--color-text-danger); }
+.metric-delta.neutral   { color: var(--color-text-tertiary); }
+
+/* ── Trend charts ── */
+.trend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 640px) { .trend-grid { grid-template-columns: 1fr; } }
+
+.trend-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+.trend-title {
+  font-family: 'Rubik', sans-serif;
+  font-size: 13px; font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+.trend-sub { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 14px; }
+
+/* ── Sparkline ── */
+.sparkline-wrap { position: relative; height: 60px; }
+svg.sparkline { width: 100%; height: 60px; overflow: visible; }
+
+/* ── Source table ── */
+.source-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.source-table th {
+  text-align: left; font-size: 10px; font-weight: 600;
+  color: var(--color-text-tertiary); text-transform: uppercase;
+  letter-spacing: 0.05em; padding: 0 0 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.source-table td { padding: 7px 0; border-bottom: 1px solid var(--color-border); }
+.source-table tr:last-child td { border-bottom: none; }
+.status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+
+/* ── Spec note ── */
+.spec-note {
+  background: var(--color-bg-info);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-text-info);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-top: 28px;
+}
+.spec-note strong { color: var(--color-text-primary); font-weight: 600; }
+
+/* ── Footer ── */
+.monitor-footer {
+  margin-top: 40px; padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--color-text-tertiary);
+  flex-wrap: wrap; gap: 8px;
+}
+.monitor-footer a { color: var(--color-text-info); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="monitor-header">
+    <div class="doc-logo">
+      <div class="doc-logo-icon">
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="6" r="3.5"/><path d="M8 11c-3.5 0-6 1.5-6 2.5h12c0-1-2.5-2.5-6-2.5z"/></svg>
+      </div>
+      <span class="doc-logo-name">Surprisingly Clever</span>
+      <span class="doc-logo-sub">Pipeline health monitor</span>
+    </div>
+    <div class="header-right">
+      <span class="last-updated">Sample data · Jun 2026</span>
+      <span class="health-pill warning">
+        <span class="health-dot"></span>
+        2 issues need attention
+      </span>
+    </div>
+  </div>
+
+  <!-- ── REAL-TIME ALERTS ── -->
+  <div class="section-header">
+    <span class="section-label">Real-time alerts</span>
+    <div class="section-rule"></div>
+    <span class="section-time">Live · ops use</span>
+  </div>
+
+  <div class="alert-strip">
+    <div class="alert-item critical">
+      <div class="alert-dot critical"></div>
+      <div class="alert-text">Reconciliation gap detected — OfferNest</div>
+      <div class="alert-meta">18 leads claimed · 0 in queue · May 11–16 window</div>
+      <span class="alert-badge critical">Action required</span>
+    </div>
+    <div class="alert-item warning">
+      <div class="alert-dot warning"></div>
+      <div class="alert-text">Quiet hours violation attempted — 3 leads</div>
+      <div class="alert-meta">Blocked · John Clark 11pm ET · 2 borderline at 9pm ET</div>
+      <span class="alert-badge warning">Review</span>
+    </div>
+    <div class="alert-item ok">
+      <div class="alert-dot ok"></div>
+      <div class="alert-text">Consent hard-block — no fires in last 24 hours</div>
+      <div class="alert-meta">All SMS attempts cleared consent check</div>
+      <span class="alert-badge ok">Healthy</span>
+    </div>
+    <div class="alert-item ok">
+      <div class="alert-dot ok"></div>
+      <div class="alert-text">SMS fallback rule — 0 dead-end leads in last 24 hours</div>
+      <div class="alert-meta">Landline detections escalating to call correctly</div>
+      <span class="alert-badge ok">Healthy</span>
+    </div>
+  </div>
+
+  <!-- ── DAILY DELIVERY SIGNALS ── -->
+  <div class="section-header">
+    <span class="section-label">Daily delivery signals</span>
+    <div class="section-rule"></div>
+    <span class="section-time">Yesterday · PM + ops</span>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card bad">
+      <div class="metric-label">Reconciliation gap</div>
+      <div class="metric-value bad">18</div>
+      <div class="metric-target">Target: <strong>0</strong></div>
+      <div class="metric-delta up-bad">↑ OfferNest source</div>
+    </div>
+    <div class="metric-card ok">
+      <div class="metric-label">Consent block fires</div>
+      <div class="metric-value ok">0</div>
+      <div class="metric-target">Target: <strong>0 or stable</strong></div>
+      <div class="metric-delta down-good">↓ vs. prior period</div>
+    </div>
+    <div class="metric-card ok">
+      <div class="metric-label">Dead-end leads</div>
+      <div class="metric-value ok">0</div>
+      <div class="metric-target">Target: <strong>&lt;1%</strong></div>
+      <div class="metric-delta neutral">— No change</div>
+    </div>
+    <div class="metric-card warn">
+      <div class="metric-label">SMS fallback escalations</div>
+      <div class="metric-value warn">12</div>
+      <div class="metric-target">Target: <strong>Declining</strong></div>
+      <div class="metric-delta neutral">— Baseline (pre-fix)</div>
+    </div>
+    <div class="metric-card bad">
+      <div class="metric-label">Quiet hours attempts</div>
+      <div class="metric-value bad">3</div>
+      <div class="metric-target">Target: <strong>0</strong></div>
+      <div class="metric-delta up-bad">↑ Needs enforcement</div>
+    </div>
+    <div class="metric-card warn">
+      <div class="metric-label">Leads missing required fields</div>
+      <div class="metric-value warn">32</div>
+      <div class="metric-target">Target: <strong>0</strong></div>
+      <div class="metric-delta neutral">— 17 consent · 15 email</div>
+    </div>
+  </div>
+
+  <!-- ── TRENDING ── -->
+  <div class="section-header">
+    <span class="section-label">Trending</span>
+    <div class="section-rule"></div>
+    <span class="section-time">8-week view · PM + leadership</span>
+  </div>
+
+  <div class="trend-grid">
+
+    <!-- Source completion rates -->
+    <div class="trend-card">
+      <div class="trend-title">Completion rate by source</div>
+      <div class="trend-sub">Is the system getting healthier per partner?</div>
+      <table class="source-table">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th style="text-align:right;">Leads</th>
+            <th style="text-align:right;">Rate</th>
+            <th style="text-align:right;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>LeadBridge</td>
+            <td style="text-align:right;color:var(--color-text-secondary);">45</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-success);">64%</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-success);"></span>Healthy</td>
+          </tr>
+          <tr>
+            <td>ListingLoop</td>
+            <td style="text-align:right;color:var(--color-text-secondary);">26</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-success);">54%</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-success);"></span>Healthy</td>
+          </tr>
+          <tr>
+            <td>HomeFlow</td>
+            <td style="text-align:right;color:var(--color-text-secondary);">27</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-warning);">37%</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-warning);"></span>Monitor</td>
+          </tr>
+          <tr>
+            <td>SellFast Direct</td>
+            <td style="text-align:right;color:var(--color-text-secondary);">27</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-warning);">37%</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-warning);"></span>Monitor</td>
+          </tr>
+          <tr>
+            <td>OfferNest</td>
+            <td style="text-align:right;color:var(--color-text-secondary);">52</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-warning);">33%</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-danger);"></span>Routing gap</td>
+          </tr>
+          <tr>
+            <td>AgentMatch Pro</td>
+            <td style="text-align:right;color:var(--color-text-secondary);">29</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-danger);">31%</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-danger);"></span>Investigate</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TTFC by source -->
+    <div class="trend-card">
+      <div class="trend-title">Avg. time to first contact by source</div>
+      <div class="trend-sub">Is the LeadBridge bimodal split closing?</div>
+      <table class="source-table">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th style="text-align:right;">Avg TTFC</th>
+            <th style="text-align:right;">Target</th>
+            <th style="text-align:right;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ListingLoop</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:600;">4 min</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">&lt;5 min</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-success);"></span>On target</td>
+          </tr>
+          <tr>
+            <td>SellFast Direct</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:600;">6 min</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">&lt;5 min</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-warning);"></span>Close</td>
+          </tr>
+          <tr>
+            <td>HomeFlow</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:600;">8 min</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">&lt;5 min</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-warning);"></span>Monitor</td>
+          </tr>
+          <tr>
+            <td>AgentMatch Pro</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:600;">11 min</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">&lt;5 min</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-warning);"></span>Lagging</td>
+          </tr>
+          <tr>
+            <td>OfferNest</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:600;">—</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">&lt;5 min</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-danger);"></span>Routing gap</td>
+          </tr>
+          <tr>
+            <td>LeadBridge</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:600;">12 / 265 min</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">&lt;5 min</td>
+            <td style="text-align:right;"><span class="status-dot" style="background:var(--color-text-danger);"></span>Bimodal</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Structural failure trend -->
+    <div class="trend-card">
+      <div class="trend-title">Structural failure counts</div>
+      <div class="trend-sub">Are the 11 diagnosed issues going down?</div>
+      <table class="source-table">
+        <thead>
+          <tr>
+            <th>Issue</th>
+            <th style="text-align:right;">Baseline</th>
+            <th style="text-align:right;">Current</th>
+            <th style="text-align:right;">Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Never contacted</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">18</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-danger);">18</td>
+            <td style="text-align:right;color:var(--color-text-danger);">→ Open</td>
+          </tr>
+          <tr>
+            <td>SMS dead end</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">12</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-danger);">12</td>
+            <td style="text-align:right;color:var(--color-text-danger);">→ Open</td>
+          </tr>
+          <tr>
+            <td>Consent violation</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">10</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-danger);">10</td>
+            <td style="text-align:right;color:var(--color-text-danger);">→ Open</td>
+          </tr>
+          <tr>
+            <td>Duplicates</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">14</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-danger);">14</td>
+            <td style="text-align:right;color:var(--color-text-danger);">→ Open</td>
+          </tr>
+          <tr>
+            <td>Missing consent field</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">17</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-danger);">17</td>
+            <td style="text-align:right;color:var(--color-text-danger);">→ Open</td>
+          </tr>
+          <tr>
+            <td>Missing email</td>
+            <td style="text-align:right;color:var(--color-text-tertiary);">15</td>
+            <td style="text-align:right;font-family:'Rubik',sans-serif;font-weight:700;color:var(--color-text-danger);">15</td>
+            <td style="text-align:right;color:var(--color-text-danger);">→ Open</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:var(--color-text-tertiary);margin-top:10px;">Baseline = diagnostic sample period. Current = same issues, unresolved. Trending data available once fixes ship.</p>
+    </div>
+
+    <!-- Partner health -->
+    <div class="trend-card">
+      <div class="trend-title">Partner health scorecard</div>
+      <div class="trend-sub">Quarterly review — form compliance, data quality, performance</div>
+      <table class="source-table">
+        <thead>
+          <tr>
+            <th>Partner</th>
+            <th style="text-align:center;">Form ✓</th>
+            <th style="text-align:center;">Consent ✓</th>
+            <th style="text-align:center;">Email ✓</th>
+            <th style="text-align:right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>LeadBridge</td>
+            <td style="text-align:center;">?</td>
+            <td style="text-align:center;color:var(--color-text-success);">✓</td>
+            <td style="text-align:center;color:var(--color-text-success);">✓</td>
+            <td style="text-align:right;color:var(--color-text-warning);">Audit batch path</td>
+          </tr>
+          <tr>
+            <td>ListingLoop</td>
+            <td style="text-align:center;">?</td>
+            <td style="text-align:center;color:var(--color-text-success);">✓</td>
+            <td style="text-align:center;color:var(--color-text-success);">✓</td>
+            <td style="text-align:right;color:var(--color-text-success);">Clean</td>
+          </tr>
+          <tr>
+            <td>HomeFlow</td>
+            <td style="text-align:center;">?</td>
+            <td style="text-align:center;color:var(--color-text-warning);">~</td>
+            <td style="text-align:center;color:var(--color-text-warning);">~</td>
+            <td style="text-align:right;color:var(--color-text-warning);">Form audit</td>
+          </tr>
+          <tr>
+            <td>SellFast Direct</td>
+            <td style="text-align:center;">?</td>
+            <td style="text-align:center;color:var(--color-text-warning);">~</td>
+            <td style="text-align:center;color:var(--color-text-warning);">~</td>
+            <td style="text-align:right;color:var(--color-text-warning);">Form audit</td>
+          </tr>
+          <tr>
+            <td>AgentMatch Pro</td>
+            <td style="text-align:center;">?</td>
+            <td style="text-align:center;color:var(--color-text-warning);">~</td>
+            <td style="text-align:center;color:var(--color-text-warning);">~</td>
+            <td style="text-align:right;color:var(--color-text-danger);">Quality review</td>
+          </tr>
+          <tr>
+            <td>OfferNest</td>
+            <td style="text-align:center;color:var(--color-text-danger);">✗</td>
+            <td style="text-align:center;color:var(--color-text-danger);">✗</td>
+            <td style="text-align:center;color:var(--color-text-warning);">~</td>
+            <td style="text-align:right;color:var(--color-text-danger);">Escalate</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:var(--color-text-tertiary);margin-top:10px;">? = unaudited · ~ = partial · ✓ = confirmed · ✗ = confirmed gap</p>
+    </div>
+
+  </div>
+
+  <!-- Spec note -->
+  <div class="spec-note">
+    <strong>Note: this is a design spec, not a live system.</strong> Data shown reflects the diagnostic sample period (206 leads, 379 attempts). In production, all panels would connect to live data sources: the lead DB, telecom platform logs, and a scheduled reconciliation job. Alert routing would connect to Slack (#data-ingestion, #eng-outreach-platform, #compliance) and email. Resolved alert state would persist to DB with timestamp and owner. See the full product spec for production requirements.
+  </div>
+
+  <div class="monitor-footer">
+    <span>Surprisingly Clever · Pipeline Health Monitor · Design spec · Jun 2026</span>
+    <a href="https://surprisinglyclever.com">← Back to diagnostic tool</a>
+  </div>
+
+</div>
+</body>
+</html>
