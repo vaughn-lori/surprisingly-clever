@@ -204,7 +204,7 @@ const ISSUE_META = {
     notifyChannel: "slack", notifyTeam: "#data-ingestion" },
   sms_dead_end: { label: "SMS dead end, no call fallback", severity: 3, count: SUMMARY.sms_dead_end, automatable: true, owner: "Engineering", monetized: true,
     why: "The dialer detects the landline failure (err30006) but is only configured to retry the same SMS 2\u20133 times \u2014 it has no fallback rule to escalate to a call, even though every one of these 12 leads has consent_call=TRUE on file.",
-    fix: "Add a fallback rule: after one SMS landline failure, auto-trigger a call attempt instead of repeating the SMS. Low effort, addresses 12 fully-stalled leads immediately, and a phone-type lookup before the first SMS would prevent the failure entirely.",
+    fix: "Two fixes, sequenced by effort. Immediate: add a fallback rule so one SMS landline failure (err30006) auto-triggers a call attempt instead of repeating the SMS. This addresses all 12 stalled leads with low engineering effort. Upstream: add a phone-type lookup at intake — before the first outreach attempt fires — so landlines are identified before the SMS is ever sent. The fallback is the fast fix. The lookup is the right fix.",
     fixNote: "Pure logic change in the outreach engine \u2014 no partner or data dependency. A good candidate to ship first.",
     notifyChannel: "slack", notifyTeam: "#eng-outreach-platform" },
   consent_violation: { label: "SMS sent without consent", severity: 3, count: SUMMARY.consent_violation, automatable: true, owner: "Engineering",
